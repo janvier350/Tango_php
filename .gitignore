@@ -1,21 +1,9 @@
-# Archivos del proyecto
-/vendor/
-/node_modules/
-.env
-.env.local
-.env.production
-
-# Archivos del IDE y SO
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-
-# Logs y caché
+*.class
+*.war
+nbproject/
+nb-configuration.xml
+build/
+dist/
+target/
 *.log
-*.cache
-*.tmp
-
-# Configuraciones locales
-config.local.php
-wp-config-local.php
+.DS_Store
