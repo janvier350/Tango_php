@@ -1,0 +1,21 @@
+# Archivos del proyecto
+/vendor/
+/node_modules/
+.env
+.env.local
+.env.production
+
+# Archivos del IDE y SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs y caché
+*.log
+*.cache
+*.tmp
+
+# Configuraciones locales
+config.local.php
+wp-config-local.php
