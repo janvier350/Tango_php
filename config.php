@@ -1,6 +1,6 @@
 <?php
 // --- CONFIGURACIÓN DE CONEXIÓN ---
-$host = "localhost";
+$host = "buadnet.com.ec";
 $user = "buadnetc_flujo";
 $pass = "]h(N{WS4ep[,}k8E";
 $db   = "buadnetc_flujo_caja";

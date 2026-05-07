@@ -25,8 +25,8 @@ $faltante = $efectivo_real - $saldo_sistema;
 <body>
     
   <?php
-// Aseg¨²rate de que la sesi¨®n est¨¦ iniciada antes de usar $_SESSION
-// session_start(); // (si no est¨¢ ya en tu c¨®digo)
+// Asegï¿½ï¿½rate de que la sesiï¿½ï¿½n estï¿½ï¿½ iniciada antes de usar $_SESSION
+// session_start(); // (si no estï¿½ï¿½ ya en tu cï¿½ï¿½digo)
 
 if (isset($_SESSION["user_rol"])) {
     if ($_SESSION["user_rol"] == 4) {
@@ -38,7 +38,7 @@ if (isset($_SESSION["user_rol"])) {
         include 'navbar.php';
     }
 } else {
-    // Si no hay rol definido, puedes redirigir o mostrar un navbar gen¨¦rico
+    // Si no hay rol definido, puedes redirigir o mostrar un navbar genï¿½ï¿½rico
     include 'navbar.php';
 }
 ?>
@@ -52,7 +52,7 @@ if (isset($_SESSION["user_rol"])) {
                 <div class="card bg-success text-white text-center p-4">
                     <h6 class="fw-bold"> Oficina - 401 </h6>
                     <?php
-                        // Obtenemos el ID del usuario de la sesi¨®n
+                        // Obtenemos el ID del usuario de la sesiï¿½ï¿½n
                         $id_usuario_sesion = 3;
                         
                         
@@ -81,7 +81,7 @@ if (isset($_SESSION["user_rol"])) {
                 <div class="card bg-success text-white text-center p-4">
                     <h6 class="fw-bold">Oficina - 403 </h6>
                      <?php
-                        // Obtenemos el ID del usuario de la sesi¨®n
+                        // Obtenemos el ID del usuario de la sesiï¿½ï¿½n
                         $id_usuario_sesion = 4; 
                         
                         // Query para sumar recibidos y restar entregados
@@ -108,7 +108,7 @@ if (isset($_SESSION["user_rol"])) {
                 <div class="card <?php echo $faltante < 0 ? 'bg-danger' : 'bg-primary'; ?> text-white text-center p-4">
                     <h6 class="fw-bold">Caja General</h6>
                     <?php
-                        // Obtenemos el ID del usuario de la sesi¨®n
+                        // Obtenemos el ID del usuario de la sesiï¿½ï¿½n
                         $id_usuario_sesion = 2; 
                         
                         // Query para sumar recibidos y restar entregados
@@ -172,7 +172,7 @@ if (isset($_SESSION["user_rol"])) {
                      <a class="dropdown-item" href="validar_movimientos_401.php">  
                     <h6 class="fw-bold"> Oficina - 401 </h6>
                     <?php
-                        // Obtenemos el ID del usuario de la sesi¨®n
+                        // Obtenemos el ID del usuario de la sesiï¿½ï¿½n
                         $id_usuario_sesion = 3;
                         
                         
@@ -202,7 +202,7 @@ if (isset($_SESSION["user_rol"])) {
                     <a class="dropdown-item" href="validar_movimientos_403.php">  
                     <h6 class="fw-bold">Oficina - 403 </h6>
                      <?php
-                        // Obtenemos el ID del usuario de la sesi¨®n
+                        // Obtenemos el ID del usuario de la sesiï¿½ï¿½n
                         $id_usuario_sesion = 4; 
                         
                         // Query para sumar recibidos y restar entregados
@@ -231,7 +231,7 @@ if (isset($_SESSION["user_rol"])) {
                    <a class="dropdown-item" href="validar_movimientos_general.php">  
                     <h6 class="fw-bold">Caja General</h6>
                     <?php
-                        // Obtenemos el ID del usuario de la sesi¨®n
+                        // Obtenemos el ID del usuario de la sesiï¿½ï¿½n
                         $id_usuario_sesion = 2; 
                         
                         // Query para sumar recibidos y restar entregados
@@ -305,7 +305,7 @@ if (isset($_SESSION["user_rol"])) {
                 <div class="card bg-dark text-white text-center p-4">
                     <h6 class="fw-bold">Oficina - <?php echo $_SESSION["oficina"]; ?></h6>
                      <?php
-                        // Obtenemos el ID del usuario de la sesi¨®n
+                        // Obtenemos el ID del usuario de la sesiï¿½ï¿½n
                         $id_usuario_sesion = $_SESSION["user_id"]; 
                         
                         // Query para sumar recibidos y restar entregados
