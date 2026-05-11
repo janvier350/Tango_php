@@ -301,7 +301,7 @@ $(document).ready(function() {
     <?php 
     $id_usuario_sesion = $_SESSION["user_id"]; 
     $saldo_acumulado = 0;
-    $id_oficina = 1;
+    $id_oficina = 3;
 
     // Actualizamos la consulta para traer el campo ESTADO
     $stmt_list = $conn->prepare("SELECT m.*, r.REPOSICION AS nombre_clasificacion, c.nombre AS nombre_categoria, p.PROYECTO AS nombre_proyecto, u.usuario AS nombre_revisor 

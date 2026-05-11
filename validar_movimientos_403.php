@@ -1,28 +1,28 @@
 <?php
-// 1. CONFIGURACIÓN DE ZONA HORARIA (ECUADOR)
+// 1. CONFIGURACI�0�7N DE ZONA HORARIA (ECUADOR)
 date_default_timezone_set('America/Guayaquil');
 require_once 'config.php';
 require_once 'auth.php';
 verificar_auth();
 
-// Asegurar que la conexión use UTF-8 para evitar caracteres extraños
+// Asegurar que la conexi��n use UTF-8 para evitar caracteres extra�0�9os
 $conn->set_charset("utf8");
 
  header('Content-Type: text/html; charset=utf-8');
 $conn->set_charset("utf8");
  
  
-// 1. Lógica de Inserción
+// 1. L��gica de Inserci��n
 if (isset($_POST['reg_mov'])) {
-    // Calculamos el periodo automáticamente
+    // Calculamos el periodo autom��ticamente
     $periodo = date("Y-n", strtotime($_POST['f']));
     
-    // Separamos el monto en Recibido o Entregado según la selección
+    // Separamos el monto en Recibido o Entregado seg��n la selecci��n
     $imp_recibido = ($_POST['tipo_flujo'] == 'Ingreso') ? $_POST['m'] : 0;
     $imp_entregado = ($_POST['tipo_flujo'] == 'Egreso') ? $_POST['m'] : 0;
     
     // --- NUEVOS DATOS ---
-    // Obtenemos el ID del usuario de la sesión (usando la variable que definiste)
+    // Obtenemos el ID del usuario de la sesi��n (usando la variable que definiste)
     $id_usuario_sesion = $_SESSION["user_id"]; 
     $id_rol = $_SESSION["user_rol"];
     $id_oficina = $_SESSION["oficina_ID"];
@@ -32,7 +32,7 @@ if (isset($_POST['reg_mov'])) {
     // Obtenemos la fecha y hora actual para el registro
     $fecha_registro_actual = date("Y-m-d H:i:s");
 
-    // Preparamos la consulta (Asegúrate de que los nombres de columnas coincidan con tu SQL)
+    // Preparamos la consulta (Aseg��rate de que los nombres de columnas coincidan con tu SQL)
     
     $stmt = $conn->prepare("INSERT INTO movimientos (fecha, empresa, concepto, intermediario, importe_recibido, importe_entregado, vale_ref, doc_soporte, inf_fin, periodo, banco, cheque_num, ID_USUARIO, FECHA_REGISTRO_I_E,ID_PROYECTO,intermediario2, ID_OFICINA, ESTADO) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     
@@ -51,7 +51,7 @@ if (isset($_POST['reg_mov'])) {
         $periodo, 
         $_POST['ban'], 
         $_POST['chq'],
-        $id_usuario_sesion,    // ID del usuario que inicia sesión
+        $id_usuario_sesion,    // ID del usuario que inicia sesi��n
         $fecha_registro_actual, // Fecha y hora del sistema
         $id_proyecto,
          $_POST['intermediario'],
@@ -62,7 +62,7 @@ if (isset($_POST['reg_mov'])) {
     
     if ($stmt->execute()) {
         $stmt->close();
-        // REDIRECCIÓN CRÍTICA: Debe coincidir exactamente con el nombre de tu archivo
+        // REDIRECCI�0�7N CR�0�1TICA: Debe coincidir exactamente con el nombre de tu archivo
         header("Location: movimientos.php");
         exit();
     } else {
@@ -74,7 +74,7 @@ if (isset($_POST['reg_mov'])) {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Sistema de Caja | TANGO</title>
+    <title>Sistema de Caja | Buadnet</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="estilos.css">
     
@@ -120,7 +120,7 @@ $(document).ready(function() {
         placeholder: "Seleccione una opcion",
         allowClear: true,
         width: '100%', // Para que ocupe todo el ancho de la columna de Bootstrap
-        theme: "classic" // O puedes omitirlo para el estilo estándar
+        theme: "classic" // O puedes omitirlo para el estilo est��ndar
     });
 });
 </script>
@@ -137,8 +137,8 @@ $(document).ready(function() {
     
     
     <div class="container-fluid px-4 mt-3">
-        <!--
-         <div class="card mb-12 border-0 shadow-sm">
+        
+        <div class="card mb-12 border-0 shadow-sm">
             <div class="card-body">
                 <form method="POST" action="movimientos.php" class="row g-2">
                     <div class="col-md-2">
@@ -212,7 +212,7 @@ $(document).ready(function() {
                         <label class="small fw-bold">Vale/Ref</label>
                         <input type="text" name="v_ref" class="form-control form-control-sm">
                     </div>
-                
+                -->
                     <div class="col-md-3">
                         <label class="small fw-bold">Doc. Soporte</label>
                         <input type="text" name="doc" class="form-control form-control-sm" placeholder =" # factura ...">
@@ -260,8 +260,6 @@ $(document).ready(function() {
                 </form>
             </div>
         </div>
-        -->
-       
         <br>
 <div class="table-responsive bg-white shadow-sm p-3">
 <a class="dropdown-item" href="#">Usuario: <?php echo $_SESSION["user_name"]; ?> - <?php echo $_SESSION["user_rol"]; ?></a>
@@ -303,6 +301,7 @@ $(document).ready(function() {
     <?php 
     $id_usuario_sesion = $_SESSION["user_id"]; 
     $saldo_acumulado = 0;
+    $id_oficina = 2;
 
     // Actualizamos la consulta para traer el campo ESTADO
     $stmt_list = $conn->prepare("SELECT m.*, r.REPOSICION AS nombre_clasificacion, c.nombre AS nombre_categoria, p.PROYECTO AS nombre_proyecto, u.usuario AS nombre_revisor 
@@ -311,16 +310,16 @@ $(document).ready(function() {
         LEFT JOIN cat_reposiciones c ON r.ID_CAT_REPOCICIONES = c.id 
         LEFT JOIN PROYECTOS p ON m.ID_PROYECTO = p.ID_PROYECTO 
         LEFT JOIN usuarios u ON m.ID_USUARIO_REVISA = u.id 
-        where m.id_oficna = 2
+        WHERE m.id_oficina = ?
         ORDER BY m.fecha ASC, m.id ASC");
-    $stmt_list->bind_param("i", $id_usuario_sesion);
+    $stmt_list->bind_param("i", $id_oficina);
     $stmt_list->execute();
     $movs = $stmt_list->get_result();
 
     while($m = $movs->fetch_assoc()): 
         $es_anulado = ($m['ESTADO'] == 'I');
         
-        // CRÍTICO: Solo sumar al saldo si NO está anulado
+        // CR�0�1TICO: Solo sumar al saldo si NO est�� anulado
         if (!$es_anulado) {
             $saldo_acumulado += ($m['importe_recibido'] - $m['importe_entregado']);
         }
@@ -359,7 +358,7 @@ $(document).ready(function() {
             <?php elseif ($_SESSION["user_rol"] == 3 || $_SESSION["user_rol"] == 4): ?> 
                 <a href="aprobar_movimiento.php?id=<?php echo $m['id']; ?>" 
                    class="btn btn-sm btn-outline-success" 
-                   onclick="return confirm('¿Confirmar revisión de este movimiento?');">
+                   onclick="return confirm('�0�7Confirmar revisi��n de este movimiento?');">
                     <i class="bi bi-check-circle"></i> Aprobar
                 </a>
             <?php else: ?>
@@ -375,7 +374,7 @@ $(document).ready(function() {
                 <?php if (!$es_anulado): ?>
                 <a href="anular_movimiento.php?id=<?php echo $m['id']; ?>" 
                    class="btn btn-outline-danger btn-sm" 
-                   onclick="return confirm('¿Estás seguro de ANULAR este registro? El valor ya no contará en el saldo.');">
+                   onclick="return confirm('�0�7Est��s seguro de ANULAR este registro? El valor ya no contar�� en el saldo.');">
                     ANULAR
                 </a>
                 <?php else: ?>
@@ -401,15 +400,15 @@ $(document).ready(function() {
       <form action="anular_movimiento.php" method="POST">
         <div class="modal-body">
           <input type="hidden" name="id_anular" id="id_anular">
-          <p>¿Seguro de que deseas anular este registro? Esta acción no se puede deshacer.</p>
+          <p>�0�7Seguro de que deseas anular este registro? Esta acci��n no se puede deshacer.</p>
           <div class="form-group">
-            <label class="fw-bold">Motivo de Anulación (Obligatorio):</label>
+            <label class="fw-bold">Motivo de Anulaci��n (Obligatorio):</label>
             <textarea name="motivo" class="form-control" rows="3" required placeholder="Ej: Error en el monto, factura anulada por el proveedor..."></textarea>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-danger">Confirmar Anulación</button>
+          <button type="submit" class="btn btn-danger">Confirmar Anulaci��n</button>
         </div>
       </form>
     </div>
