@@ -1,0 +1,27 @@
+name: Despliegue Automatico Buadnet
+on:
+  push:
+    branches:
+      - main  # Se activa cada vez que haces push a la rama main
+
+jobs:
+  web-deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v3
+
+    - name: 🚀 Sync files via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        # Ajusta esta ruta a la carpeta de tu proyecto en el hosting
+        server-dir: ./public_html/Flujo_caja/ 
+        # Excluir carpetas que no necesites subir (como las de GitHub)
+        exclude: |
+          **/.git*
+          **/.github*
+          **/node_modules*
