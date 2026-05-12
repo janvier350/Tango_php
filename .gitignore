@@ -1,9 +1,0 @@
-*.class
-*.war
-nbproject/
-nb-configuration.xml
-build/
-dist/
-target/
-*.log
-.DS_Store
