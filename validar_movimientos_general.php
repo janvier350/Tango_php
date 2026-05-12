@@ -140,124 +140,8 @@ $(document).ready(function() {
         
         <div class="card mb-12 border-0 shadow-sm">
             <div class="card-body">
-                <form method="POST" action="movimientos.php" class="row g-2">
-                    <div class="col-md-2">
-                        <label class="small fw-bold">Fecha</label>
-                        <input type="date" name="f" class="form-control form-control-sm" value="<?php echo date('Y-m-d'); ?>">
-                    </div>
-                    
-                    <div class="col-md-2">
-                        <label class="small fw-bold  text-primary">Beneficiario</label>
-                        <select name="inter" class="form-select form-select-sm buscable" required>
-                            <option value="">Buscar beneficiario...</option>
-                            <?php 
-                                $res_ben = $conn->query("SELECT RAZON_SOCIAL FROM BENEFICIARIO ORDER BY RAZON_SOCIAL ASC");
-                                while($ben = $res_ben->fetch_assoc()) {
-                                    echo "<option value='".htmlspecialchars($ben['RAZON_SOCIAL'], ENT_QUOTES, 'UTF-8')."'>".htmlspecialchars($ben['RAZON_SOCIAL'], ENT_QUOTES, 'UTF-8')."</option>";
-                                } 
-                            ?>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="small fw-bold  text-primary">Intermediario</label>
-                        <select name="intermediario" class="form-select form-select-sm buscable" required>
-                            <option value="">Buscar intermediario...</option>
-                            <?php 
-                                $res_ben = $conn->query("SELECT RAZON_SOCIAL FROM BENEFICIARIO WHERE TIPO = 'I' ORDER BY RAZON_SOCIAL ASC");
-                                while($ben = $res_ben->fetch_assoc()) {
-                                    echo "<option value='".htmlspecialchars($ben['RAZON_SOCIAL'], ENT_QUOTES, 'UTF-8')."'>".htmlspecialchars($ben['RAZON_SOCIAL'], ENT_QUOTES, 'UTF-8')."</option>";
-                                } 
-                            ?>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="small fw-bold text-primary">Proyecto</label>
-                        <select name="id_proyecto" class="form-select form-select-sm buscable">
-                            <option value="">Buscar proyecto...</option>
-                            <?php 
-                                $res = $conn->query("SELECT ID_PROYECTO, PROYECTO FROM PROYECTOS ORDER BY PROYECTO ASC"); 
-                                while($p = $res->fetch_assoc()) {
-                                    echo "<option value='{$p['ID_PROYECTO']}'>".htmlspecialchars($p['PROYECTO'])."</option>";
-                                }
-                            ?>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-2">
-                        <label class="small fw-bold">Empresa</label>
-                        <select name="emp" class="form-select form-select-sm">
-                            <?php $res = $conn->query("SELECT nombre FROM cat_empresas"); while($e = $res->fetch_assoc()) echo "<option>{$e['nombre']}</option>"; ?>
-                        </select>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="small fw-bold">Descripcion</label>
-                        <input type="text" name="c" class="form-control form-control-sm" placeholder="Detalle" required>
-                    </div>
-                    
-                    <div class="col-md-2">
-                        <label class="small fw-bold">Tipo</label>
-                        <select name="tipo_flujo" class="form-select form-select-sm">
-                            <option value="Egreso">Entrega (-)</option>
-                            <option value="Ingreso">Recibe (+)</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-1">
-                        <label class="small fw-bold">Monto</label>
-                        <input type="number" step="0.01" name="m" class="form-control form-control-sm" required>
-                    </div>
-                    
-                  <!--  <div class="col-md-1">
-                        <label class="small fw-bold">Vale/Ref</label>
-                        <input type="text" name="v_ref" class="form-control form-control-sm">
-                    </div>
-                -->
-                    <div class="col-md-3">
-                        <label class="small fw-bold">Doc. Soporte</label>
-                        <input type="text" name="doc" class="form-control form-control-sm" placeholder =" # factura ...">
-                    </div>
-
-                  
-                    <div class="col-md-6">
-    <label class="small fw-bold text-primary">INF. FINANCIERA </label>
-    <select name="id_reposicion" id="id_reposicion" class="form-select form-select-sm select2-buscable" required>
-        <option value="">Escribe para buscar...</option>
-        <?php 
-            $sql = "SELECT a.nombre AS categoria, b.REPOSICION AS detalle, b.ID_REPOSICION 
-                    FROM cat_reposiciones a 
-                    INNER JOIN CAT_REPOSICION b ON a.id = b.ID_CAT_REPOCICIONES 
-                    ORDER BY a.nombre ASC, b.REPOSICION ASC";
-            
-            $res_rep = $conn->query($sql);
-            
-            while($row = $res_rep->fetch_assoc()) {
-                $id = $row['ID_REPOSICION'];
-                $etiqueta = $row['categoria'] . " - " . $row['detalle'];
-                echo "<option value='".htmlspecialchars($id)."'>".htmlspecialchars($etiqueta)."</option>";
-            } 
-        ?>
-    </select>
-</div>
-                    
-
-                    <div class="col-md-2">
-                        <label class="small fw-bold">Banco</label>
-                        <select name="ban" class="form-select form-select-sm">
-                            <option value="EFECTIVO">Efectivo</option>
-                            <?php $res = $conn->query("SELECT nombre FROM cat_bancos"); while($ba = $res->fetch_assoc()) echo "<option>{$ba['nombre']}</option>"; ?>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="small fw-bold">CHEQUE #</label>
-                        <input type="text" name="chq" class="form-control form-control-sm" value="N/A">
-                    </div>
-                    
-                    <div class="col-md-1 d-flex align-items-end">
-                        <button type="submit" name="reg_mov" class="btn btn-dark btn-sm w-100 fw-bold">OK</button>
-                    </div>
-                </form>
+                <!-- cabecera formulario -->
+                 <h1> caja general administracion </h1>
             </div>
         </div>
         <br>
@@ -301,15 +185,20 @@ $(document).ready(function() {
     <?php 
     $id_usuario_sesion = $_SESSION["user_id"]; 
     $saldo_acumulado = 0;
-    $id_oficina = 3;
+    $id_oficina = 4;
 
     // Actualizamos la consulta para traer el campo ESTADO
-    $stmt_list = $conn->prepare("SELECT m.*, r.REPOSICION AS nombre_clasificacion, c.nombre AS nombre_categoria, p.PROYECTO AS nombre_proyecto, u.usuario AS nombre_revisor 
+    $stmt_list = $conn->prepare("SELECT m.*, r.REPOSICION AS nombre_clasificacion, 
+    c.nombre AS nombre_categoria, p.PROYECTO AS nombre_proyecto, 
+    u.usuario AS nombre_revisor ,
+    u_registra.usuario AS nombre_quien_registra
         FROM movimientos m 
         LEFT JOIN CAT_REPOSICION r ON m.inf_fin = r.ID_REPOSICION 
         LEFT JOIN cat_reposiciones c ON r.ID_CAT_REPOCICIONES = c.id 
         LEFT JOIN PROYECTOS p ON m.ID_PROYECTO = p.ID_PROYECTO 
         LEFT JOIN usuarios u ON m.ID_USUARIO_REVISA = u.id 
+        -- Join para quien Registra (columna 24)
+        LEFT JOIN usuarios u_registra ON m.ID_USUARIO = u_registra.id
         WHERE m.id_oficina = ?
         ORDER BY m.fecha ASC, m.id ASC");
     $stmt_list->bind_param("i", $id_oficina);
@@ -344,7 +233,7 @@ $(document).ready(function() {
         <td class="text-center"><?php echo $m['nombre_categoria']; ?> / <?php echo $m['nombre_clasificacion']; ?></td>
         <td class="text-center"><?php echo $m['banco']; ?></td>
         <td class="text-center"><?php echo $m['cheque_num']; ?></td>
-        <td class="text-center"><?php echo $m['ID_USUARIO']; ?></td>
+        <td class="text-center"><?php echo $m['nombre_quien_registra']; ?></td>
        <td class="text-center fw-bold text-primary">
             <?php echo htmlspecialchars($m['nombre_revisor'] ?? '---'); ?>
         </td>
