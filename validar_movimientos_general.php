@@ -177,7 +177,7 @@ $(document).ready(function() {
                         <th> # REVISADO</th>
                         <th>FECHA REGISTRO</th>
                         <th>APROBAR</th>
-                        <th>ACCIONES</th>
+                       
                         
                     </tr>
                 </thead>
@@ -255,22 +255,7 @@ $(document).ready(function() {
             <?php endif; ?>
         </td>
 
-        <td class="text-center">
-            <div class="btn-group" role="group">
-                <a href="imprimir_vale.php?id=<?php echo $m['id']; ?>" target="_blank" class="btn btn-outline-primary btn-sm <?php echo $es_anulado ? 'disabled' : ''; ?>">PDF</a>
-                <a href="editar_movimiento.php?id=<?php echo $m['id']; ?>" class="btn btn-outline-warning btn-sm <?php echo $es_anulado ? 'disabled' : ''; ?>">EDITAR</a>
-                
-                <?php if (!$es_anulado): ?>
-                <a href="anular_movimiento.php?id=<?php echo $m['id']; ?>" 
-                   class="btn btn-outline-danger btn-sm" 
-                   onclick="return confirm('�0�7Est��s seguro de ANULAR este registro? El valor ya no contar�� en el saldo.');">
-                    ANULAR
-                </a>
-                <?php else: ?>
-                <span class="badge bg-danger">ANULADO</span>
-                <?php endif; ?>
-            </div>
-        </td>
+       
     </tr>
     <?php endwhile; ?>
 
