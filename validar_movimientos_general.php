@@ -172,9 +172,9 @@ $(document).ready(function() {
                         <th>DOC. SOPORTE</th>
                         <th>INF.FIN</th>
                         <th>BANCO</th>
-                        <th>CHEQUE #</th>
-                        <th> # USUARIO</th>
-                        <th> # REVISADO</th>
+                        <th>CHEQUE </th>
+                        <th> USUARIO</th>
+                        <th> REVISADO</th>
                         <th>FECHA REGISTRO</th>
                         <th>APROBAR</th>
                        
