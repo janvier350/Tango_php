@@ -142,6 +142,7 @@ $(document).ready(function() {
             <div class="card-body">
               <!-- cabecera formulario -->
                  <h1> caja 401 </h1>
+                 <p> validacion de moviemintos como CEO </p>
             </div>
         </div>
         <br>
