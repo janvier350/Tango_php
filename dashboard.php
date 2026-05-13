@@ -48,6 +48,9 @@ $stmt_off_name = $conn->prepare("SELECT OFICINA FROM CTR_OFICINA WHERE ID_OFICIN
 $stmt_off_name->bind_param("i", $id_oficina_consulta);
 $stmt_off_name->execute();
 $nombre_oficina = $stmt_off_name->get_result()->fetch_assoc()['OFICINA'] ?? "Sin Nombre";
+
+
+
 ?>
 
 <!DOCTYPE html>
@@ -166,6 +169,61 @@ $nombre_oficina = $stmt_off_name->get_result()->fetch_assoc()['OFICINA'] ?? "Sin
                     </div>
                 </div>
             </div>
+            <div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-danger text-white fw-bold">
+                <i class="bi bi-pie-chart-fill me-2"></i> Resumen de Gastos (INF. FIN.)
+            </div>
+            <div class="card-body p-0">
+                <?php
+// Consulta para agrupar gastos por tipo de Información Financiera
+// Sumamos solo el 'importe_entregado' ya que nos interesan los GASTOS
+$id_oficina_actual = $id_oficina_consulta; // Asegúrate de tener esta variable definida
+$sql_resumen = "SELECT 
+                    r.REPOSICION AS nombre_gasto, 
+                    SUM(m.importe_entregado) AS total_gasto
+                FROM movimientos m
+                INNER JOIN CAT_REPOSICION r ON m.inf_fin = r.ID_REPOSICION
+                WHERE m.id_oficina = ? AND m.importe_entregado > 0
+                GROUP BY r.REPOSICION
+                ORDER BY total_gasto DESC";
+
+$stmt_res = $conn->prepare($sql_resumen);
+$stmt_res->bind_param("i", $id_oficina_actual);
+$stmt_res->execute();
+$res_gastos = $stmt_res->get_result();
+?>
+                <ul class="list-group list-group-flush">
+                    <?php 
+                    $gran_total = 0;
+                    if ($res_gastos->num_rows > 0):
+                        while($gasto = $res_gastos->fetch_assoc()): 
+                            $gran_total += $gasto['total_gasto'];
+                    ?>
+                        <li class="list-group-item d-flex justify-content-between align-items-center small">
+                            <?php echo htmlspecialchars($gasto['nombre_gasto']); ?>
+                            <span class="fw-bold text-danger">
+                                $<?php echo number_format($gasto['total_gasto'], 2); ?>
+                            </span>
+                        </li>
+                    <?php 
+                        endwhile; 
+                    else:
+                    ?>
+                        <li class="list-group-item text-center text-muted small">No hay gastos registrados</li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+            <div class="card-footer bg-light d-flex justify-content-between">
+                <span class="fw-bold">TOTAL GASTOS:</span>
+                <span class="fw-bold text-danger" style="font-size: 1.1rem;">
+                    $<?php echo number_format($gran_total, 2); ?>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
         </div>
     </div>
 
