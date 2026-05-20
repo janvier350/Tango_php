@@ -49,6 +49,38 @@ $stmt_off_name->bind_param("i", $id_oficina_consulta);
 $stmt_off_name->execute();
 $nombre_oficina = $stmt_off_name->get_result()->fetch_assoc()['OFICINA'] ?? "Sin Nombre";
 
+//mapa de calor
+
+date_default_timezone_set('America/Guayaquil');
+$anio_actual = date('Y');
+
+// Modifica el id_oficina según cómo lo manejes en tu sesión
+$id_oficina_actual = $_SESSION['id_oficina'] ?? 1; 
+
+$sql_heatmap = "SELECT 
+                    MONTH(fecha) as mes,
+                    DAY(fecha) as dia,
+                    SUM(importe_recibido + importe_entregado) as total_diario
+                FROM movimientos
+                WHERE YEAR(fecha) = ? AND id_oficina = ?
+                GROUP BY MONTH(fecha), DAY(fecha)";
+
+$stmt_heat = $conn->prepare($sql_heatmap);
+$stmt_heat->bind_param("ii", $anio_actual, $id_oficina_actual);
+$stmt_heat->execute();
+$res_heat = $stmt_heat->get_result();
+
+// Construimos un array indexado por [mes][dia] para dibujarlo fácil en HTML
+$datos_mapa = [];
+while ($row = $res_heat->fetch_assoc()) {
+    $datos_mapa[$row['mes']][$row['dia']] = $row['total_diario'];
+}
+
+// Nombres de los meses para las cabeceras
+$meses_nombres = [
+    1 => "Ene", 2 => "Feb", 3 => "Mar", 4 => "Abr", 5 => "May", 6 => "Jun",
+    7 => "Jul", 8 => "Ago", 9 => "Sep", 10 => "Oct", 11 => "Nov", 12 => "Dic"
+];
 
 
 ?>
@@ -145,7 +177,72 @@ $nombre_oficina = $stmt_off_name->get_result()->fetch_assoc()['OFICINA'] ?? "Sin
                 </div>
             </div>
         </div>
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-grid-3x3-gap-fill me-2"></i> Flujo de Caja: Mapa de Calor (<?php echo $anio_actual; ?>)</span>
+        <span class="badge bg-secondary small">Indicador: Intensidad por volumen ($) diario</span>
+    </div>
+    <div class="card-body overflow-auto">
+        <div class="d-flex flex-row justify-content-between text-center fw-bold text-muted mb-2 small" style="min-width: 800px;">
+            <div style="width: 40px;">Día</div>
+            <?php foreach ($meses_nombres as $m_num => $m_nom): ?>
+                <div class="flex-fill"><?php echo $m_nom; ?></div>
+            <?php endforeach; ?>
+        </div>
 
+        <div class="d-flex flex-column" style="min-width: 800px; height: 500px; overflow-y: auto;">
+            <?php for ($dia = 1; $dia <= 31; $dia++): ?>
+                <div class="d-flex flex-row align-items-center mb-1">
+                    <div class="text-end pe-2 small fw-bold text-muted" style="width: 40px; font-size: 0.75rem;">
+                        <?php echo $dia; ?>
+                    </div>
+                    
+                    <?php for ($mes = 1; $mes <= 12; $mes++): 
+                        // Verificamos si el día existe en ese mes específico (ej: 31 de Febrero no existe)
+                        if (!checkdate($mes, $dia, $anio_actual)) {
+                            echo '<div class="flex-fill m-1 bg-light border-0" style="height: 24px; opacity: 0.2;"></div>';
+                            continue;
+                        }
+
+                        $valor = $datos_mapa[$mes][$dia] ?? 0;
+                        
+                        // --- LÓGICA DE INDICADORES (COLOR SEGÚN INTENSIDAD) ---
+                        $bg_color = 'bg-white text-muted'; // Sin movimientos
+                        $border = 'border: 1px solid #e9ecef;';
+                        $title_hint = "Sin movimientos";
+
+                        if ($valor > 0 && $valor < 300) {
+                            $bg_color = 'text-white';
+                            $border = 'background-color: #d1e7dd; border: 1px solid #bcd0c7; color: #0f5132 !important;'; // Verde Bajo
+                            $title_hint = "Bajo: $".number_format($valor, 2);
+                        } elseif ($valor >= 300 && $valor < 1000) {
+                            $bg_color = 'text-white';
+                            $border = 'background-color: #ffcaf2; border: 1px solid #ffb3ed; color: #aa0088 !important;'; // Promedio Medio (Rosa)
+                            $title_hint = "Medio: $".number_format($valor, 2);
+                        } elseif ($valor >= 1000) {
+                            $bg_color = 'text-white fw-bold';
+                            $border = 'background-color: #dc3545; border: 1px solid #b02a37;'; // Promedio Alto (Rojo Alerta)
+                            $title_hint = "¡ALTO VOLUMEN!: $".number_format($valor, 2);
+                        }
+                    ?>
+                        <div class="flex-fill m-1 rounded text-center small d-flex align-items-center justify-content-center <?php echo $bg_color; ?>" 
+                             style="height: 24px; font-size: 0.65rem; cursor: pointer; <?php echo $border; ?>" 
+                             title="<?php echo $title_hint; ?> (Día <?php echo $dia; ?>/<?php echo $mes; ?>)">
+                            <?php echo $valor > 0 ? '$'.round($valor) : ''; ?>
+                        </div>
+                    <?php endfor; ?>
+                </div>
+            <?php endfor; ?>
+        </div>
+        
+        <div class="d-flex justify-content-end gap-3 mt-3 small text-muted">
+            <span><span class="badge border bg-white text-dark">■</span> Sin flujo</span>
+            <span><span class="badge" style="background-color: #d1e7dd; color: #0f5132;">■</span> Flujo Bajo (< $300)</span>
+            <span><span class="badge" style="background-color: #ffcaf2; color: #aa0088;">■</span> Flujo Normal ($300 - $1000)</span>
+            <span><span class="badge bg-danger">■</span> Promedio Alto (> $1000)</span>
+        </div>
+    </div>
+</div>
         <div class="row">
             <div class="col-md-8">
                 <div class="card card-dash shadow-sm mb-4">
@@ -225,6 +322,7 @@ $res_gastos = $stmt_res->get_result();
     </div>
 </div>
         </div>
+        
     </div>
 
     <script>
