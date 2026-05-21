@@ -54,10 +54,7 @@ $nombre_oficina = $stmt_off_name->get_result()->fetch_assoc()['OFICINA'] ?? "Sin
 date_default_timezone_set('America/Guayaquil');
 $anio_actual = date('Y');
 
-// Modifica el id_oficina según cómo lo manejes en tu sesión
-$id_oficina_actual = $_SESSION['id_oficina'] ?? 1; 
-
-$sql_heatmap = "SELECT 
+$sql_heatmap = "SELECT
                     MONTH(fecha) as mes,
                     DAY(fecha) as dia,
                     SUM(importe_recibido + importe_entregado) as total_diario
@@ -66,7 +63,7 @@ $sql_heatmap = "SELECT
                 GROUP BY MONTH(fecha), DAY(fecha)";
 
 $stmt_heat = $conn->prepare($sql_heatmap);
-$stmt_heat->bind_param("ii", $anio_actual, $id_oficina_actual);
+$stmt_heat->bind_param("ii", $anio_actual, $id_oficina_consulta);
 $stmt_heat->execute();
 $res_heat = $stmt_heat->get_result();
 
@@ -190,7 +187,7 @@ $meses_nombres = [
             <?php endforeach; ?>
         </div>
 
-        <div class="d-flex flex-column" style="min-width: 800px; height: 500px; overflow-y: auto;">
+        <div class="d-flex flex-column" style="min-width: 800px;">
             <?php for ($dia = 1; $dia <= 31; $dia++): ?>
                 <div class="d-flex flex-row align-items-center mb-1">
                     <div class="text-end pe-2 small fw-bold text-muted" style="width: 40px; font-size: 0.75rem;">
@@ -225,11 +222,20 @@ $meses_nombres = [
                             $title_hint = "¡ALTO VOLUMEN!: $".number_format($valor, 2);
                         }
                     ?>
-                        <div class="flex-fill m-1 rounded text-center small d-flex align-items-center justify-content-center <?php echo $bg_color; ?>" 
-                             style="height: 24px; font-size: 0.65rem; cursor: pointer; <?php echo $border; ?>" 
-                             title="<?php echo $title_hint; ?> (Día <?php echo $dia; ?>/<?php echo $mes; ?>)">
-                            <?php echo $valor > 0 ? '$'.round($valor) : ''; ?>
+                        <?php if ($valor > 0): ?>
+                        <div class="flex-fill m-1 rounded text-center small d-flex align-items-center justify-content-center heatmap-cell <?php echo $bg_color; ?>"
+                             style="height: 24px; font-size: 0.65rem; cursor: pointer; <?php echo $border; ?>"
+                             title="<?php echo $title_hint; ?> (Día <?php echo $dia; ?>/<?php echo $mes; ?>)"
+                             data-dia="<?php echo $dia; ?>"
+                             data-mes="<?php echo $mes; ?>"
+                             data-anio="<?php echo $anio_actual; ?>"
+                             data-oficina="<?php echo $id_oficina_consulta; ?>">
+                            $<?php echo round($valor); ?>
                         </div>
+                        <?php else: ?>
+                        <div class="flex-fill m-1 rounded <?php echo $bg_color; ?>"
+                             style="height: 24px; <?php echo $border; ?>"></div>
+                        <?php endif; ?>
                     <?php endfor; ?>
                 </div>
             <?php endfor; ?>
@@ -343,6 +349,123 @@ $res_gastos = $stmt_res->get_result();
                 plugins: { legend: { display: false } },
                 scales: { y: { beginAtZero: true } }
             }
+        });
+    </script>
+
+    <!-- Modal Movimientos del Día -->
+    <div class="modal fade" id="modalMovDia" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="bi bi-calendar-event me-2"></i> Movimientos del <span id="modalFechaLabel"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="modalLoading" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 text-muted small">Cargando...</p>
+                    </div>
+                    <div id="modalContenido" class="d-none">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="small">Empresa / Concepto</th>
+                                    <th class="small">Intermediario</th>
+                                    <th class="small">Inf. Fin.</th>
+                                    <th class="small text-success text-end">Ingreso</th>
+                                    <th class="small text-danger text-end">Egreso</th>
+                                    <th class="small text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalTablaBody"></tbody>
+                            <tfoot class="table-light fw-bold">
+                                <tr>
+                                    <td colspan="3" class="small text-end">TOTAL</td>
+                                    <td class="small text-success text-end" id="modalTotalIngresos"></td>
+                                    <td class="small text-danger text-end" id="modalTotalEgresos"></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <p id="modalSinDatos" class="text-center text-muted py-3 d-none">No se encontraron movimientos.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.querySelectorAll('.heatmap-cell').forEach(function(cel) {
+            cel.addEventListener('click', function() {
+                const dia     = this.dataset.dia;
+                const mes     = this.dataset.mes;
+                const anio    = this.dataset.anio;
+                const oficina = this.dataset.oficina;
+
+                const meses = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+                document.getElementById('modalFechaLabel').textContent =
+                    dia + ' de ' + meses[parseInt(mes)] + ' ' + anio;
+
+                document.getElementById('modalLoading').classList.remove('d-none');
+                document.getElementById('modalContenido').classList.add('d-none');
+
+                const modal = new bootstrap.Modal(document.getElementById('modalMovDia'));
+                modal.show();
+
+                fetch(`get_movimientos_dia.php?dia=${dia}&mes=${mes}&anio=${anio}&id_oficina=${oficina}`)
+                    .then(r => r.json())
+                    .then(function(data) {
+                        document.getElementById('modalLoading').classList.add('d-none');
+                        document.getElementById('modalContenido').classList.remove('d-none');
+
+                        const tbody = document.getElementById('modalTablaBody');
+                        const sinDatos = document.getElementById('modalSinDatos');
+                        tbody.innerHTML = '';
+
+                        if (!data.length) {
+                            sinDatos.classList.remove('d-none');
+                            return;
+                        }
+                        sinDatos.classList.add('d-none');
+
+                        let totalIng = 0, totalEgr = 0;
+
+                        data.forEach(function(m) {
+                            const ing = parseFloat(m.importe_recibido) || 0;
+                            const egr = parseFloat(m.importe_entregado) || 0;
+                            totalIng += ing;
+                            totalEgr += egr;
+
+                            const estadoBadge = m.ESTADO === 'A'
+                                ? '<span class="badge bg-success">Aprobado</span>'
+                                : '<span class="badge bg-secondary">Inactivo</span>';
+
+                            tbody.innerHTML += `<tr>
+                                <td class="small">
+                                    <div class="fw-bold">${m.empresa || '-'}</div>
+                                    <div class="text-muted">${m.concepto || '-'}</div>
+                                </td>
+                                <td class="small">${m.intermediario || '-'}</td>
+                                <td class="small">${m.inf_fin_nombre || '-'}</td>
+                                <td class="small text-success text-end">${ing > 0 ? '$' + ing.toFixed(2) : '-'}</td>
+                                <td class="small text-danger text-end">${egr > 0 ? '$' + egr.toFixed(2) : '-'}</td>
+                                <td class="small text-center">${estadoBadge}</td>
+                            </tr>`;
+                        });
+
+                        document.getElementById('modalTotalIngresos').textContent =
+                            totalIng > 0 ? '$' + totalIng.toFixed(2) : '-';
+                        document.getElementById('modalTotalEgresos').textContent =
+                            totalEgr > 0 ? '$' + totalEgr.toFixed(2) : '-';
+                    })
+                    .catch(function() {
+                        document.getElementById('modalLoading').classList.add('d-none');
+                        document.getElementById('modalContenido').classList.remove('d-none');
+                        document.getElementById('modalTablaBody').innerHTML =
+                            '<tr><td colspan="6" class="text-center text-danger">Error al cargar datos.</td></tr>';
+                    });
+            });
         });
     </script>
 
