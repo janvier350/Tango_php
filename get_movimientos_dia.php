@@ -18,7 +18,7 @@ if (!$dia || !$mes || !$anio || !$id_oficina) {
 $fecha = sprintf('%04d-%02d-%02d', $anio, $mes, $dia);
 
 $sql = "SELECT
-            m.ID_MOVIMIENTO,
+            m.id,
             m.fecha,
             m.empresa,
             m.concepto,
@@ -29,9 +29,11 @@ $sql = "SELECT
             m.banco,
             m.cheque_num,
             m.ESTADO,
-            r.REPOSICION AS inf_fin_nombre
+            r.REPOSICION AS inf_fin_nombre,
+            u.usuario AS nombre_revisor 
         FROM movimientos m
         LEFT JOIN CAT_REPOSICION r ON m.inf_fin = r.ID_REPOSICION
+        LEFT JOIN usuarios u ON m.ID_USUARIO_REVISA = u.id 
         WHERE DATE(m.fecha) = ? AND m.ID_OFICINA = ?
         ORDER BY m.fecha ASC";
 

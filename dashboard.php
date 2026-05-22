@@ -375,6 +375,7 @@ $res_gastos = $stmt_res->get_result();
                                     <th class="small text-success text-end">Ingreso</th>
                                     <th class="small text-danger text-end">Egreso</th>
                                     <th class="small text-center">Estado</th>
+                                    <th class="small text-center">Revisado</th>
                                 </tr>
                             </thead>
                             <tbody id="modalTablaBody"></tbody>
@@ -436,6 +437,7 @@ $res_gastos = $stmt_res->get_result();
                             const egr = parseFloat(m.importe_entregado) || 0;
                             totalIng += ing;
                             totalEgr += egr;
+                           
 
                             const estadoBadge = m.ESTADO === 'A'
                                 ? '<span class="badge bg-success">Aprobado</span>'
@@ -451,6 +453,7 @@ $res_gastos = $stmt_res->get_result();
                                 <td class="small text-success text-end">${ing > 0 ? '$' + ing.toFixed(2) : '-'}</td>
                                 <td class="small text-danger text-end">${egr > 0 ? '$' + egr.toFixed(2) : '-'}</td>
                                 <td class="small text-center">${estadoBadge}</td>
+                                <td class="small text-center">${m.nombre_revisor || '-'}</td>
                             </tr>`;
                         });
 
