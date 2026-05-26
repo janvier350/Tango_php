@@ -29,6 +29,44 @@ $t_ingresos = $resumen['ingresos'] ?? 0;
 $t_egresos = $resumen['egresos'] ?? 0;
 $saldo = $t_ingresos - $t_egresos;
 
+// 3b. QUERY: TOTALES DEL PERIODO ANTERIOR (misma duración, corrido hacia atrás)
+$dias_periodo = (new DateTime($fecha_inicio))->diff(new DateTime($fecha_fin))->days + 1;
+$prev_fin     = (new DateTime($fecha_inicio))->modify('-1 day')->format('Y-m-d');
+$prev_inicio  = (new DateTime($prev_fin))->modify('-' . ($dias_periodo - 1) . ' days')->format('Y-m-d');
+
+$stmt_prev = $conn->prepare($sql_resumen);
+$stmt_prev->bind_param("iss", $id_oficina_consulta, $prev_inicio, $prev_fin);
+$stmt_prev->execute();
+$resumen_prev   = $stmt_prev->get_result()->fetch_assoc();
+$prev_ingresos  = $resumen_prev['ingresos'] ?? 0;
+$prev_egresos   = $resumen_prev['egresos'] ?? 0;
+$prev_saldo     = $prev_ingresos - $prev_egresos;
+
+// Función auxiliar para calcular variación porcentual
+function pct_change($actual, $anterior) {
+    if ($anterior == 0) return $actual > 0 ? 100 : 0;
+    return round((($actual - $anterior) / abs($anterior)) * 100, 1);
+}
+
+$pct_saldo    = pct_change($saldo,       $prev_saldo);
+$pct_ingresos = pct_change($t_ingresos,  $prev_ingresos);
+$pct_egresos  = pct_change($t_egresos,   $prev_egresos);
+
+// 3c. QUERY: TOTAL DE TRANSACCIONES (periodo actual y anterior)
+$sql_txn = "SELECT COUNT(*) as total FROM movimientos WHERE ID_OFICINA = ? AND ESTADO = 'A' AND fecha BETWEEN ? AND ?";
+
+$stmt_txn = $conn->prepare($sql_txn);
+$stmt_txn->bind_param("iss", $id_oficina_consulta, $fecha_inicio, $fecha_fin);
+$stmt_txn->execute();
+$t_transacciones = $stmt_txn->get_result()->fetch_assoc()['total'] ?? 0;
+
+$stmt_txn_prev = $conn->prepare($sql_txn);
+$stmt_txn_prev->bind_param("iss", $id_oficina_consulta, $prev_inicio, $prev_fin);
+$stmt_txn_prev->execute();
+$prev_transacciones = $stmt_txn_prev->get_result()->fetch_assoc()['total'] ?? 0;
+
+$pct_transacciones = pct_change($t_transacciones, $prev_transacciones);
+
 // 4. QUERY: TOP 5 CATEGORÍAS DE GASTO
 $sql_cats = "SELECT c.nombre, SUM(m.importe_entregado) as total 
              FROM movimientos m
@@ -79,6 +117,34 @@ $meses_nombres = [
     7 => "Jul", 8 => "Ago", 9 => "Sep", 10 => "Oct", 11 => "Nov", 12 => "Dic"
 ];
 
+// 6. QUERY: TENDENCIA DIARIA DEL PERIODO FILTRADO
+$sql_tendencia = "SELECT
+    DATE_FORMAT(fecha, '%Y-%m-%d') as dia,
+    SUM(CASE WHEN ESTADO = 'A' THEN importe_recibido ELSE 0 END) as ingresos,
+    SUM(CASE WHEN ESTADO = 'A' THEN importe_entregado ELSE 0 END) as egresos
+    FROM movimientos
+    WHERE ID_OFICINA = ? AND fecha BETWEEN ? AND ?
+    GROUP BY DATE_FORMAT(fecha, '%Y-%m-%d')
+    ORDER BY dia ASC";
+
+$stmt_tend = $conn->prepare($sql_tendencia);
+$stmt_tend->bind_param("iss", $id_oficina_consulta, $fecha_inicio, $fecha_fin);
+$stmt_tend->execute();
+$res_tendencia = $stmt_tend->get_result();
+
+$labels_tend = [];
+$data_ing_tend = [];
+$data_egr_tend = [];
+
+while ($row = $res_tendencia->fetch_assoc()) {
+    $labels_tend[]    = $row['dia'];
+    $data_ing_tend[]  = (float)$row['ingresos'];
+    $data_egr_tend[]  = (float)$row['egresos'];
+}
+
+$json_labels   = json_encode($labels_tend);
+$json_ingresos = json_encode($data_ing_tend);
+$json_egresos  = json_encode($data_egr_tend);
 
 ?>
 
@@ -139,36 +205,77 @@ $meses_nombres = [
             </div>
         </div>
 
+        <?php
+        // Badge de variación reutilizable
+        function badge_var($pct, $invert = false) {
+            if ($pct == 0) {
+                return '<span class="badge bg-secondary bg-opacity-25 text-secondary ms-2 small"><i class="bi bi-dash"></i> Sin cambio</span>';
+            }
+            $sube  = $pct > 0;
+            $bueno = $invert ? !$sube : $sube; // para egresos: subir es malo
+            $color = $bueno ? 'success' : 'danger';
+            $icon  = $sube  ? 'bi-arrow-up-short' : 'bi-arrow-down-short';
+            $sign  = $sube  ? '+' : '';
+            return "<span class=\"badge bg-{$color} bg-opacity-20 text-{$color} ms-2 small\"><i class=\"bi {$icon}\"></i> {$sign}{$pct}%</span>";
+        }
+        ?>
         <div class="row g-3 mb-4">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card card-dash shadow-sm bg-primary text-white h-100">
                     <div class="card-body d-flex align-items-center">
                         <div class="icon-box bg-white text-primary me-3"><i class="bi bi-wallet2 fs-4"></i></div>
-                        <div>
+                        <div class="flex-grow-1">
                             <p class="mb-0 opacity-75 small">SALDO ACTUAL</p>
                             <h3 class="mb-0 fw-bold">$<?php echo number_format($saldo, 2); ?></h3>
+                            <div class="mt-1 opacity-90 small">
+                                vs anterior: <strong>$<?php echo number_format($prev_saldo, 2); ?></strong>
+                                <?php echo badge_var($pct_saldo); ?>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card card-dash shadow-sm h-100">
                     <div class="card-body d-flex align-items-center">
                         <div class="icon-box bg-success-subtle text-success me-3"><i class="bi bi-graph-up-arrow fs-4"></i></div>
-                        <div>
+                        <div class="flex-grow-1">
                             <p class="mb-0 text-muted small">TOTAL INGRESOS</p>
                             <h3 class="mb-0 fw-bold text-success">$<?php echo number_format($t_ingresos, 2); ?></h3>
+                            <div class="mt-1 text-muted small">
+                                vs anterior: <strong>$<?php echo number_format($prev_ingresos, 2); ?></strong>
+                                <?php echo badge_var($pct_ingresos); ?>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card card-dash shadow-sm h-100">
                     <div class="card-body d-flex align-items-center">
                         <div class="icon-box bg-danger-subtle text-danger me-3"><i class="bi bi-graph-down-arrow fs-4"></i></div>
-                        <div>
+                        <div class="flex-grow-1">
                             <p class="mb-0 text-muted small">TOTAL EGRESOS</p>
                             <h3 class="mb-0 fw-bold text-danger">$<?php echo number_format($t_egresos, 2); ?></h3>
+                            <div class="mt-1 text-muted small">
+                                vs anterior: <strong>$<?php echo number_format($prev_egresos, 2); ?></strong>
+                                <?php echo badge_var($pct_egresos, true); ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card card-dash shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="icon-box bg-warning-subtle text-warning me-3"><i class="bi bi-receipt fs-4"></i></div>
+                        <div class="flex-grow-1">
+                            <p class="mb-0 text-muted small">TRANSACCIONES</p>
+                            <h3 class="mb-0 fw-bold text-dark"><?php echo number_format($t_transacciones); ?></h3>
+                            <div class="mt-1 text-muted small">
+                                vs anterior: <strong><?php echo number_format($prev_transacciones); ?></strong>
+                                <?php echo badge_var($pct_transacciones); ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -252,9 +359,14 @@ $meses_nombres = [
         <div class="row">
             <div class="col-md-8">
                 <div class="card card-dash shadow-sm mb-4">
-                    <div class="card-header bg-white fw-bold py-3">Flujo de Efectivo del Periodo</div>
+                    <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-graph-up me-2 text-primary"></i>Tendencia Diaria del Periodo</span>
+                        <span class="badge bg-primary-subtle text-primary small">
+                            <?php echo $fecha_inicio; ?> → <?php echo $fecha_fin; ?>
+                        </span>
+                    </div>
                     <div class="card-body">
-                        <canvas id="mainChart" style="max-height: 300px;"></canvas>
+                        <canvas id="mainChart" style="max-height: 340px;"></canvas>
                     </div>
                 </div>
             </div>
@@ -333,21 +445,71 @@ $res_gastos = $stmt_res->get_result();
 
     <script>
         const ctx = document.getElementById('mainChart').getContext('2d');
+
+        const labelsData   = <?php echo $json_labels; ?>;
+        const ingresosData = <?php echo $json_ingresos; ?>;
+        const egresosData  = <?php echo $json_egresos; ?>;
+
+        // Formato legible para las etiquetas del eje X
+        const labelsFmt = labelsData.map(d => {
+            const [y, m, day] = d.split('-');
+            const meses = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+            return day + ' ' + meses[parseInt(m)];
+        });
+
         new Chart(ctx, {
-            type: 'bar',
+            type: 'line',
             data: {
-                labels: ['Ingresos (+)', 'Egresos (-)'],
-                datasets: [{
-                    label: 'Monto en USD',
-                    data: [<?php echo $t_ingresos; ?>, <?php echo $t_egresos; ?>],
-                    backgroundColor: ['#0d6efd', '#dc3545'],
-                    borderRadius: 8
-                }]
+                labels: labelsFmt,
+                datasets: [
+                    {
+                        label: 'Ingresos',
+                        data: ingresosData,
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13,110,253,0.08)',
+                        borderWidth: 2,
+                        pointRadius: labelsData.length > 20 ? 2 : 4,
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Egresos',
+                        data: egresosData,
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220,53,69,0.08)',
+                        borderWidth: 2,
+                        pointRadius: labelsData.length > 20 ? 2 : 4,
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
             },
             options: {
                 responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true } }
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ' $' + ctx.parsed.y.toLocaleString('es-EC', {minimumFractionDigits: 2})
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            maxTicksLimit: 15,
+                            maxRotation: 45,
+                            font: { size: 11 }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: v => '$' + v.toLocaleString('es-EC')
+                        }
+                    }
+                }
             }
         });
     </script>
