@@ -12,9 +12,22 @@ $conn->set_charset("utf8");
 $conn->set_charset("utf8");
  
  
-// 1. L��gica de Inserci��n
+// 1. Lógica de Inserción
+$error_doc = '';
 if (isset($_POST['reg_mov'])) {
-    // Calculamos el periodo autom��ticamente
+    // Validación server-side: documento duplicado (global, incluye anulados)
+    $doc_post = trim($_POST['doc'] ?? '');
+    if ($doc_post !== '') {
+        $chk = $conn->prepare("SELECT id FROM movimientos WHERE doc_soporte = ?");
+        $chk->bind_param("s", $doc_post);
+        $chk->execute();
+        if ($chk->get_result()->num_rows > 0) {
+            $error_doc = "El documento \"" . htmlspecialchars($doc_post) . "\" ya está registrado en el sistema.";
+        }
+    }
+
+if ($error_doc === '') {
+    // Calculamos el periodo automáticamente
     $periodo = date("Y-n", strtotime($_POST['f']));
     
     // Separamos el monto en Recibido o Entregado seg��n la selecci��n
@@ -62,12 +75,12 @@ if (isset($_POST['reg_mov'])) {
     
     if ($stmt->execute()) {
         $stmt->close();
-        // REDIRECCI�0�7N CR�0�1TICA: Debe coincidir exactamente con el nombre de tu archivo
         header("Location: movimientos.php");
         exit();
     } else {
         echo "Error al insertar: " . $stmt->error;
     }
+} // fin if $error_doc === ''
 }
 
 // Variables de sesión disponibles globalmente
@@ -122,6 +135,12 @@ $f_texto  = $_GET['f_texto']  ?? '';
         
         <div class="card mb-12 border-0 shadow-sm">
             <div class="card-body">
+                <?php if ($error_doc): ?>
+                <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><?php echo $error_doc; ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <?php endif; ?>
                 <form method="POST" action="movimientos.php" class="row g-2">
                     <div class="col-md-2">
                         <label class="small fw-bold">Fecha</label>
@@ -211,7 +230,10 @@ $f_texto  = $_GET['f_texto']  ?? '';
                 -->
                     <div class="col-md-3">
                         <label class="small fw-bold">Doc. Soporte</label>
-                        <input type="text" name="doc" class="form-control form-control-sm" placeholder =" # factura ...">
+                        <input type="text" name="doc" id="doc_soporte" class="form-control form-control-sm <?php echo $error_doc ? 'is-invalid' : ''; ?>"
+                               placeholder="# factura ..." autocomplete="off"
+                               value="<?php echo $error_doc ? htmlspecialchars($_POST['doc'] ?? '') : ''; ?>">
+                        <div id="doc_feedback" class="form-text" style="font-size:0.7rem;"></div>
                     </div>
 
                   
@@ -660,6 +682,41 @@ $(document).ready(function() {
             { orderable: false, targets: [8, 18, 19] }
         ],
         order: []
+    });
+
+    // --- Validación Doc. Soporte en tiempo real ---
+    var checkTimerDoc;
+    $('#doc_soporte').on('input', function() {
+        var val = $(this).val().trim();
+        clearTimeout(checkTimerDoc);
+        $(this).removeClass('is-valid is-invalid');
+        $('#doc_feedback').text('').removeClass('text-success text-danger');
+        if (val.length < 2) return;
+        checkTimerDoc = setTimeout(function() {
+            $.post('ajax_doc_soporte.php', { action: 'check', doc: val }, function(res) {
+                if (res.exists) {
+                    $('#doc_soporte').addClass('is-invalid');
+                    var detalle = '';
+                    if (res.fecha)    detalle += ' · Fecha: ' + res.fecha;
+                    if (res.usuario)  detalle += ' · Usuario: ' + res.usuario;
+                    if (res.oficina)  detalle += ' · Oficina: ' + res.oficina;
+                    $('#doc_feedback')
+                        .html('<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Documento ya registrado.' + detalle + '</span>');
+                } else {
+                    $('#doc_soporte').addClass('is-valid');
+                    $('#doc_feedback').html('<span class="text-success"><i class="bi bi-check-circle me-1"></i>Disponible.</span>');
+                }
+            }, 'json');
+        }, 500);
+    });
+
+    // Bloquear submit si el doc está marcado como duplicado
+    $('form[action="movimientos.php"]').on('submit', function(e) {
+        if ($('#doc_soporte').hasClass('is-invalid')) {
+            e.preventDefault();
+            $('#doc_soporte').focus();
+            $('#doc_feedback').html('<span class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>Corrige el documento antes de guardar.</span>');
+        }
     });
 
     // --- Modal Nuevo Banco ---
