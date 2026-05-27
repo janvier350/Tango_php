@@ -160,7 +160,14 @@ $f_texto  = $_GET['f_texto']  ?? '';
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="small fw-bold text-primary">Proyecto</label>
+                        <label class="small fw-bold text-primary d-flex align-items-center gap-1">
+                            Proyecto
+                            <button type="button" class="btn btn-success btn-sm py-0 px-1 lh-1" style="font-size:0.75rem;"
+                                data-bs-toggle="modal" data-bs-target="#modalNuevoProyecto"
+                                title="Agregar nuevo proyecto">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </label>
                         <select name="id_proyecto" class="form-select form-select-sm buscable">
                             <option value="">Buscar proyecto...</option>
                             <?php 
@@ -478,6 +485,32 @@ $f_texto  = $_GET['f_texto']  ?? '';
   </div>
 </div>
 
+<!-- Modal: Nuevo Proyecto -->
+<div class="modal fade" id="modalNuevoProyecto" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white py-2">
+        <h6 class="modal-title mb-0"><i class="bi bi-folder-plus me-2"></i>Nuevo Proyecto</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label small fw-bold">Nombre del Proyecto</label>
+          <input type="text" id="np_nombre" class="form-control form-control-sm text-uppercase"
+                 placeholder="Nombre del grupo empresarial..." autocomplete="off">
+          <div id="np_feedback" class="form-text mt-1"></div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="np_guardar" class="btn btn-primary btn-sm">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Nuevo Beneficiario -->
 <div class="modal fade" id="modalNuevoBeneficiario" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-sm">
@@ -538,6 +571,69 @@ $(document).ready(function() {
             { orderable: false, targets: [8, 18, 19] }
         ],
         order: []
+    });
+
+    // --- Modal Nuevo Proyecto ---
+    var checkTimerProy;
+
+    $('#modalNuevoProyecto').on('show.bs.modal', function() {
+        $('#np_nombre').val('').removeClass('is-valid is-invalid');
+        $('#np_feedback').text('').removeClass('text-success text-danger');
+        $('#np_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+    });
+    $('#modalNuevoProyecto').on('shown.bs.modal', function() {
+        $('#np_nombre').focus();
+    });
+
+    $('#np_nombre').on('input', function() {
+        var val = $(this).val().trim();
+        clearTimeout(checkTimerProy);
+        $('#np_feedback').text('').removeClass('text-success text-danger');
+        $(this).removeClass('is-valid is-invalid');
+        if (val.length < 2) return;
+        checkTimerProy = setTimeout(function() {
+            $.post('ajax_proyecto.php', { action: 'check', proyecto: val }, function(res) {
+                if (res.exists) {
+                    $('#np_nombre').addClass('is-invalid');
+                    $('#np_feedback').text('⚠ Ya existe un proyecto con ese nombre.').addClass('text-danger');
+                } else {
+                    $('#np_nombre').addClass('is-valid');
+                    $('#np_feedback').text('✓ Disponible.').addClass('text-success');
+                }
+            }, 'json');
+        }, 500);
+    });
+
+    $('#np_guardar').on('click', function() {
+        var nombre = $('#np_nombre').val().trim();
+        if (nombre.length < 2) {
+            $('#np_nombre').addClass('is-invalid');
+            $('#np_feedback').text('Ingresa el nombre del proyecto.').addClass('text-danger');
+            return;
+        }
+        if ($('#np_nombre').hasClass('is-invalid')) return;
+
+        $('#np_guardar').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+        $.post('ajax_proyecto.php', { action: 'crear', proyecto: nombre }, function(res) {
+            if (res.success) {
+                var opt = new Option(res.proyecto, res.id, true, true);
+                $('select[name="id_proyecto"]').append(opt).trigger('change');
+
+                bootstrap.Modal.getInstance(document.getElementById('modalNuevoProyecto')).hide();
+
+                var toast = $('<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999"><div class="toast show align-items-center text-bg-primary border-0"><div class="d-flex"><div class="toast-body"><i class="bi bi-check-circle me-2"></i>Proyecto creado y seleccionado.</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div></div>');
+                $('body').append(toast);
+                setTimeout(function() { toast.remove(); }, 3000);
+            } else {
+                $('#np_nombre').addClass('is-invalid');
+                $('#np_feedback').text(res.msg).addClass('text-danger');
+                $('#np_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+            }
+        }, 'json').fail(function() {
+            $('#np_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+            alert('Error de conexión. Intenta nuevamente.');
+        });
     });
 
     // --- Modal Nuevo Beneficiario ---
