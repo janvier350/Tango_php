@@ -69,7 +69,11 @@ if (isset($_POST['reg_mov'])) {
         echo "Error al insertar: " . $stmt->error;
     }
 }
-<?php
+
+// Variables de sesión disponibles globalmente
+$id_rol            = $_SESSION["user_rol"];
+$id_usuario_sesion = $_SESSION["user_id"];
+
 // Filtros GET
 $f_desde  = $_GET['f_desde']  ?? '';
 $f_hasta  = $_GET['f_hasta']  ?? '';
