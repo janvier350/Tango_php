@@ -216,7 +216,13 @@ $f_texto  = $_GET['f_texto']  ?? '';
 
                   
                     <div class="col-md-6">
-    <label class="small fw-bold text-primary">INF. FINANCIERA </label>
+    <label class="small fw-bold text-primary d-flex align-items-center gap-1">INF. FINANCIERA
+        <button type="button" class="btn btn-success btn-sm py-0 px-1 lh-1" style="font-size:0.75rem;"
+            data-bs-toggle="modal" data-bs-target="#modalNuevaInfFin"
+            title="Agregar nueva inf. financiera">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    </label>
     <select name="id_reposicion" id="id_reposicion" class="form-select form-select-sm select2-buscable" required>
         <option value="">Escribe para buscar...</option>
         <?php 
@@ -485,6 +491,57 @@ $f_texto  = $_GET['f_texto']  ?? '';
   </div>
 </div>
 
+<!-- Modal: Nueva Inf. Financiera -->
+<div class="modal fade" id="modalNuevaInfFin" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:#2c3e50; color:#fff;">
+        <h6 class="modal-title mb-0"><i class="bi bi-journal-plus me-2"></i>Nueva Inf. Financiera</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Categoría -->
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Categoría</label>
+          <div class="d-flex gap-2 align-items-center mb-2">
+            <select id="if_cat_select" class="form-select form-select-sm">
+              <option value="">Cargando categorías...</option>
+            </select>
+            <div class="form-check form-switch mb-0 ms-1 text-nowrap">
+              <input class="form-check-input" type="checkbox" id="if_nueva_cat_toggle">
+              <label class="form-check-label small" for="if_nueva_cat_toggle">Nueva</label>
+            </div>
+          </div>
+          <div id="if_nueva_cat_wrap" class="d-none">
+            <input type="text" id="if_nueva_cat" class="form-control form-control-sm text-uppercase"
+                   placeholder="Nombre de la nueva categoría...">
+            <div id="if_nueva_cat_feedback" class="form-text"></div>
+          </div>
+        </div>
+
+        <!-- Reposición / Detalle -->
+        <div class="mb-2">
+          <label class="form-label small fw-bold">Detalle (Inf. Financiera)</label>
+          <input type="text" id="if_reposicion" class="form-control form-control-sm text-uppercase"
+                 placeholder="Nombre del concepto financiero...">
+          <div id="if_reposicion_feedback" class="form-text"></div>
+        </div>
+
+        <div id="if_preview" class="alert alert-light py-1 px-2 small d-none">
+          <i class="bi bi-tag me-1"></i><span id="if_preview_text"></span>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="if_guardar" class="btn btn-success btn-sm">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Nuevo Proyecto -->
 <div class="modal fade" id="modalNuevoProyecto" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-sm">
@@ -571,6 +628,160 @@ $(document).ready(function() {
             { orderable: false, targets: [8, 18, 19] }
         ],
         order: []
+    });
+
+    // --- Modal Nueva Inf. Financiera ---
+    var checkTimerIF, checkTimerCat;
+
+    // Cargar categorías al abrir el modal
+    $('#modalNuevaInfFin').on('show.bs.modal', function() {
+        $('#if_cat_select').html('<option value="">Cargando...</option>');
+        $('#if_nueva_cat_toggle').prop('checked', false);
+        $('#if_nueva_cat_wrap').addClass('d-none');
+        $('#if_nueva_cat').val('').removeClass('is-valid is-invalid');
+        $('#if_nueva_cat_feedback').text('').removeClass('text-success text-danger');
+        $('#if_reposicion').val('').removeClass('is-valid is-invalid');
+        $('#if_reposicion_feedback').text('').removeClass('text-success text-danger');
+        $('#if_preview').addClass('d-none');
+        $('#if_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+
+        $.post('ajax_inf_financiera.php', { action: 'categorias' }, function(cats) {
+            var opts = '<option value="">Selecciona una categoría...</option>';
+            $.each(cats, function(i, c) { opts += '<option value="'+c.id+'">'+c.nombre+'</option>'; });
+            $('#if_cat_select').html(opts);
+        }, 'json');
+    });
+    $('#modalNuevaInfFin').on('shown.bs.modal', function() { $('#if_reposicion').focus(); });
+
+    // Toggle nueva categoría
+    $('#if_nueva_cat_toggle').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#if_nueva_cat_wrap').removeClass('d-none');
+            $('#if_cat_select').prop('disabled', true);
+            $('#if_nueva_cat').focus();
+        } else {
+            $('#if_nueva_cat_wrap').addClass('d-none');
+            $('#if_cat_select').prop('disabled', false);
+            $('#if_nueva_cat').val('').removeClass('is-valid is-invalid');
+            $('#if_nueva_cat_feedback').text('').removeClass('text-success text-danger');
+        }
+        actualizarPreviewIF();
+        validarReposicionIF();
+    });
+
+    // Validación nueva categoría
+    $('#if_nueva_cat').on('input', function() {
+        var val = $(this).val().trim();
+        clearTimeout(checkTimerCat);
+        $(this).removeClass('is-valid is-invalid');
+        $('#if_nueva_cat_feedback').text('').removeClass('text-success text-danger');
+        if (val.length < 2) { actualizarPreviewIF(); return; }
+        checkTimerCat = setTimeout(function() {
+            $.post('ajax_inf_financiera.php', { action: 'check_categoria', nombre: val }, function(res) {
+                if (res.exists) {
+                    $('#if_nueva_cat').addClass('is-invalid');
+                    $('#if_nueva_cat_feedback').text('⚠ Ya existe — se usará la categoría existente.').addClass('text-danger');
+                } else {
+                    $('#if_nueva_cat').addClass('is-valid');
+                    $('#if_nueva_cat_feedback').text('✓ Se creará esta categoría.').addClass('text-success');
+                }
+                actualizarPreviewIF();
+                validarReposicionIF();
+            }, 'json');
+        }, 500);
+    });
+
+    $('#if_cat_select').on('change', function() {
+        actualizarPreviewIF();
+        validarReposicionIF();
+    });
+
+    function getCatNombreIF() {
+        if ($('#if_nueva_cat_toggle').is(':checked')) return $('#if_nueva_cat').val().trim().toUpperCase();
+        return $('#if_cat_select option:selected').text();
+    }
+
+    function actualizarPreviewIF() {
+        var cat = getCatNombreIF();
+        var rep = $('#if_reposicion').val().trim().toUpperCase();
+        if (cat && cat !== 'Selecciona una categoría...' && rep.length > 1) {
+            $('#if_preview_text').text(cat + ' / ' + rep);
+            $('#if_preview').removeClass('d-none');
+        } else {
+            $('#if_preview').addClass('d-none');
+        }
+    }
+
+    function validarReposicionIF() {
+        var rep    = $('#if_reposicion').val().trim();
+        var id_cat = $('#if_nueva_cat_toggle').is(':checked') ? 0 : parseInt($('#if_cat_select').val() || 0);
+        $('#if_reposicion').removeClass('is-valid is-invalid');
+        $('#if_reposicion_feedback').text('').removeClass('text-success text-danger');
+        if (rep.length < 2 || id_cat === 0) return;
+        $.post('ajax_inf_financiera.php', { action: 'check_reposicion', reposicion: rep, id_cat: id_cat }, function(res) {
+            if (res.exists) {
+                $('#if_reposicion').addClass('is-invalid');
+                $('#if_reposicion_feedback').text('⚠ Ya existe en esa categoría.').addClass('text-danger');
+            } else {
+                $('#if_reposicion').addClass('is-valid');
+                $('#if_reposicion_feedback').text('✓ Disponible.').addClass('text-success');
+            }
+        }, 'json');
+    }
+
+    // Validación reposición en tiempo real
+    $('#if_reposicion').on('input', function() {
+        clearTimeout(checkTimerIF);
+        actualizarPreviewIF();
+        checkTimerIF = setTimeout(validarReposicionIF, 500);
+    });
+
+    // Guardar
+    $('#if_guardar').on('click', function() {
+        var reposicion     = $('#if_reposicion').val().trim();
+        var usar_nueva_cat = $('#if_nueva_cat_toggle').is(':checked') ? '1' : '0';
+        var nueva_cat      = $('#if_nueva_cat').val().trim();
+        var id_cat         = $('#if_cat_select').val() || 0;
+
+        if (reposicion.length < 2) {
+            $('#if_reposicion').addClass('is-invalid');
+            $('#if_reposicion_feedback').text('Ingresa el nombre del concepto.').addClass('text-danger');
+            return;
+        }
+        if ($('#if_reposicion').hasClass('is-invalid')) return;
+        if (usar_nueva_cat === '0' && !id_cat) {
+            $('#if_cat_select').addClass('is-invalid'); return;
+        }
+
+        $('#if_guardar').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+        $.post('ajax_inf_financiera.php', {
+            action: 'crear', reposicion: reposicion,
+            usar_nueva_cat: usar_nueva_cat, nueva_cat: nueva_cat, id_cat_existente: id_cat
+        }, function(res) {
+            if (res.success) {
+                var opt = new Option(res.label, res.id, true, true);
+                $('#id_reposicion').append(opt).trigger('change');
+
+                bootstrap.Modal.getInstance(document.getElementById('modalNuevaInfFin')).hide();
+
+                var toast = $('<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999"><div class="toast show align-items-center border-0" style="background:#2c3e50;color:#fff;"><div class="d-flex"><div class="toast-body"><i class="bi bi-check-circle me-2"></i>Inf. financiera creada y seleccionada.</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div></div>');
+                $('body').append(toast);
+                setTimeout(function() { toast.remove(); }, 3000);
+            } else {
+                if (res.msg.includes('categoría')) {
+                    $('#if_nueva_cat').addClass('is-invalid');
+                    $('#if_nueva_cat_feedback').text(res.msg).addClass('text-danger');
+                } else {
+                    $('#if_reposicion').addClass('is-invalid');
+                    $('#if_reposicion_feedback').text(res.msg).addClass('text-danger');
+                }
+                $('#if_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+            }
+        }, 'json').fail(function() {
+            $('#if_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+            alert('Error de conexión. Intenta nuevamente.');
+        });
     });
 
     // --- Modal Nuevo Proyecto ---
