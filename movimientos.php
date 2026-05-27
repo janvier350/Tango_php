@@ -69,7 +69,11 @@ if (isset($_POST['reg_mov'])) {
         echo "Error al insertar: " . $stmt->error;
     }
 }
-<?php
+
+// Variables de sesión disponibles globalmente
+$id_rol            = $_SESSION["user_rol"];
+$id_usuario_sesion = $_SESSION["user_id"];
+
 // Filtros GET
 $f_desde  = $_GET['f_desde']  ?? '';
 $f_hasta  = $_GET['f_hasta']  ?? '';
@@ -125,7 +129,14 @@ $f_texto  = $_GET['f_texto']  ?? '';
                     </div>
                     
                     <div class="col-md-2">
-                        <label class="small fw-bold  text-primary">Beneficiario</label>
+                        <label class="small fw-bold text-primary d-flex align-items-center gap-1">
+                            Beneficiario
+                            <button type="button" class="btn btn-success btn-sm py-0 px-1 lh-1" style="font-size:0.75rem;"
+                                data-bs-toggle="modal" data-bs-target="#modalNuevoBeneficiario"
+                                title="Agregar nuevo beneficiario">
+                                <i class="bi bi-person-plus-fill"></i>
+                            </button>
+                        </label>
                         <select name="inter" class="form-select form-select-sm buscable" required>
                             <option value="">Buscar beneficiario...</option>
                             <?php 
@@ -467,6 +478,45 @@ $f_texto  = $_GET['f_texto']  ?? '';
   </div>
 </div>
 
+<!-- Modal: Nuevo Beneficiario -->
+<div class="modal fade" id="modalNuevoBeneficiario" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white py-2">
+        <h6 class="modal-title mb-0"><i class="bi bi-person-plus-fill me-2"></i>Nuevo Beneficiario</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Razón Social</label>
+          <input type="text" id="nb_razon" class="form-control form-control-sm text-uppercase"
+                 placeholder="Nombre o razón social..." autocomplete="off">
+          <div id="nb_feedback" class="form-text mt-1"></div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Tipo</label>
+          <div class="d-flex gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="nb_tipo" id="nb_tipo_b" value="0" checked>
+              <label class="form-check-label small" for="nb_tipo_b">Beneficiario</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="nb_tipo" id="nb_tipo_i" value="I">
+              <label class="form-check-label small" for="nb_tipo_i">Intermediario</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="nb_guardar" class="btn btn-success btn-sm">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
@@ -488,6 +538,83 @@ $(document).ready(function() {
             { orderable: false, targets: [8, 18, 19] }
         ],
         order: []
+    });
+
+    // --- Modal Nuevo Beneficiario ---
+    var checkTimer;
+
+    // Limpiar modal al abrirse
+    $('#modalNuevoBeneficiario').on('show.bs.modal', function() {
+        $('#nb_razon').val('').removeClass('is-valid is-invalid');
+        $('#nb_feedback').text('').removeClass('text-success text-danger');
+        $('input[name="nb_tipo"][value="0"]').prop('checked', true);
+        $('#nb_guardar').prop('disabled', false);
+    });
+    $('#modalNuevoBeneficiario').on('shown.bs.modal', function() {
+        $('#nb_razon').focus();
+    });
+
+    // Validación en tiempo real (debounce 500ms)
+    $('#nb_razon').on('input', function() {
+        var val = $(this).val().trim();
+        clearTimeout(checkTimer);
+        $('#nb_feedback').text('').removeClass('text-success text-danger');
+        $(this).removeClass('is-valid is-invalid');
+        if (val.length < 2) return;
+        checkTimer = setTimeout(function() {
+            $.post('ajax_beneficiario.php', { action: 'check', razon_social: val }, function(res) {
+                if (res.exists) {
+                    $('#nb_razon').addClass('is-invalid');
+                    $('#nb_feedback').text('⚠ Ya existe un registro con esa razón social.').addClass('text-danger');
+                } else {
+                    $('#nb_razon').addClass('is-valid');
+                    $('#nb_feedback').text('✓ Disponible.').addClass('text-success');
+                }
+            }, 'json');
+        }, 500);
+    });
+
+    // Guardar nuevo beneficiario
+    $('#nb_guardar').on('click', function() {
+        var razon = $('#nb_razon').val().trim();
+        var tipo  = $('input[name="nb_tipo"]:checked').val();
+
+        if (razon.length < 2) {
+            $('#nb_razon').addClass('is-invalid');
+            $('#nb_feedback').text('Ingresa la razón social.').addClass('text-danger');
+            return;
+        }
+        if ($('#nb_razon').hasClass('is-invalid')) return;
+
+        $('#nb_guardar').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+        $.post('ajax_beneficiario.php', { action: 'crear', razon_social: razon, tipo: tipo }, function(res) {
+            if (res.success) {
+                // Agregar a select Beneficiario y seleccionar
+                var opt = new Option(res.razon_social, res.razon_social, true, true);
+                $('select[name="inter"]').append(opt).trigger('change');
+
+                // Si es Intermediario, también al select de Intermediario
+                if (res.tipo === 'I') {
+                    var opt2 = new Option(res.razon_social, res.razon_social, true, true);
+                    $('select[name="intermediario"]').append(opt2).trigger('change');
+                }
+
+                bootstrap.Modal.getInstance(document.getElementById('modalNuevoBeneficiario')).hide();
+
+                // Toast de confirmación
+                var toast = $('<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999"><div class="toast show align-items-center text-bg-success border-0"><div class="d-flex"><div class="toast-body"><i class="bi bi-check-circle me-2"></i>Beneficiario creado y seleccionado.</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div></div>');
+                $('body').append(toast);
+                setTimeout(function() { toast.remove(); }, 3000);
+            } else {
+                $('#nb_razon').addClass('is-invalid');
+                $('#nb_feedback').text(res.msg).addClass('text-danger');
+                $('#nb_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+            }
+        }, 'json').fail(function() {
+            $('#nb_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+            alert('Error de conexión. Intenta nuevamente.');
+        });
     });
 
     // Filtro por columna usando los inputs de la segunda fila del thead
