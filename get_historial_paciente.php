@@ -9,9 +9,14 @@ if (!isset($_SESSION["rol"])) { http_response_code(403); exit; }
 $idPaciente = (int)($_GET['id'] ?? 0);
 if (!$idPaciente) { echo '<p class="text-danger p-3">ID no válido.</p>'; exit; }
 
+// Verificar si existe FECHA_NACIMIENTO en AG_PACIENTE
+$colCheck = $conexion->query("SHOW COLUMNS FROM AG_PACIENTE LIKE 'FECHA_NACIMIENTO'");
+$tieneFechaNac = ($colCheck && $colCheck->num_rows > 0);
+$extraCol = $tieneFechaNac ? ', FECHA_NACIMIENTO' : '';
+
 // Datos del paciente
 $stmtP = $conexion->prepare(
-    "SELECT NOMBRES, APELLIDOS, CEDULA, TELEFONO, EMAIL, FECHA_NACIMIENTO
+    "SELECT NOMBRES, APELLIDOS, CEDULA, TELEFONO, EMAIL $extraCol
      FROM AG_PACIENTE WHERE IDPACIENTE = ? LIMIT 1"
 );
 $stmtP->bind_param("i", $idPaciente);
