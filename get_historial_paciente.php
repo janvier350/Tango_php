@@ -9,14 +9,9 @@ if (!isset($_SESSION["rol"])) { http_response_code(403); exit; }
 $idPaciente = (int)($_GET['id'] ?? 0);
 if (!$idPaciente) { echo '<p class="text-danger p-3">ID no válido.</p>'; exit; }
 
-// Verificar si existe FECHA_NACIMIENTO en AG_PACIENTE
-$colCheck = $conexion->query("SHOW COLUMNS FROM AG_PACIENTE LIKE 'FECHA_NACIMIENTO'");
-$tieneFechaNac = ($colCheck && $colCheck->num_rows > 0);
-$extraCol = $tieneFechaNac ? ', FECHA_NACIMIENTO' : '';
-
 // Datos del paciente
 $stmtP = $conexion->prepare(
-    "SELECT NOMBRES, APELLIDOS, CEDULA, TELEFONO, EMAIL $extraCol
+    "SELECT NOMBRES, APELLIDOS, CEDULA, TELEFONO, EMAIL, FECHANACIMIENTO
      FROM AG_PACIENTE WHERE IDPACIENTE = ? LIMIT 1"
 );
 $stmtP->bind_param("i", $idPaciente);
@@ -39,9 +34,9 @@ $rowTalla = $stmtT->get_result()->fetch_assoc();
 $stmtT->close();
 $tallaActual = $rowTalla['TALLA'] ?? null;
 
-// Edad calculada
+// Edad calculada desde FECHANACIMIENTO
 $edad = null;
-$fn   = $pac['FECHA_NACIMIENTO'] ?? '';
+$fn   = $pac['FECHANACIMIENTO'] ?? '';
 if ($fn && $fn !== '0000-00-00' && $fn !== '') {
     try {
         $edad = (new DateTime($fn))->diff(new DateTime())->y;
@@ -126,7 +121,8 @@ function imcColor(float $imc): string {
                     <span><i class="bi bi-person-fill text-muted me-1"></i><?php echo $edad; ?> años</span>
                 <?php endif; ?>
                 <?php if ($tallaActual): ?>
-                    <span><i class="bi bi-rulers text-muted me-1"></i><?php echo number_format($tallaActual, 2); ?> m</span>
+                    <?php $tallaM = $tallaActual > 3 ? $tallaActual / 100 : $tallaActual; ?>
+                    <span><i class="bi bi-rulers text-muted me-1"></i><?php echo number_format($tallaM, 2); ?> m</span>
                 <?php endif; ?>
                 <span><i class="bi bi-telephone text-muted me-1"></i><?php echo htmlspecialchars($pac['TELEFONO'] ?? '—'); ?></span>
                 <span><i class="bi bi-envelope text-muted me-1"></i><?php echo htmlspecialchars($pac['EMAIL'] ?? '—'); ?></span>
