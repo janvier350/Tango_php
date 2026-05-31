@@ -9,9 +9,9 @@ if (!isset($_SESSION["rol"])) { http_response_code(403); exit; }
 $idPaciente = (int)($_GET['id'] ?? 0);
 if (!$idPaciente) { echo '<p class="text-danger p-3">ID no válido.</p>'; exit; }
 
-// Datos del paciente (solo columnas seguras)
+// Datos del paciente
 $stmtP = $conexion->prepare(
-    "SELECT NOMBRES, APELLIDOS, CEDULA, TELEFONO, EMAIL
+    "SELECT NOMBRES, APELLIDOS, CEDULA, TELEFONO, EMAIL, FECHA_NACIMIENTO
      FROM AG_PACIENTE WHERE IDPACIENTE = ? LIMIT 1"
 );
 $stmtP->bind_param("i", $idPaciente);
@@ -21,7 +21,29 @@ $stmtP->close();
 
 if (!$pac) { echo '<p class="text-danger p-3">Paciente no encontrado.</p>'; exit; }
 
-// Todas las citas del paciente (sin H.ESTADO que puede no existir)
+// Talla más reciente registrada en atenciones
+$stmtT = $conexion->prepare(
+    "SELECT H.TALLA FROM AG_HISTORIAL H
+     INNER JOIN AG_CITA C ON C.IDCITA = H.IDCITA
+     WHERE C.IDPACIENTE = ? AND H.TALLA IS NOT NULL AND H.TALLA > 0
+     ORDER BY H.FECHA_REGISTRO DESC LIMIT 1"
+);
+$stmtT->bind_param("i", $idPaciente);
+$stmtT->execute();
+$rowTalla = $stmtT->get_result()->fetch_assoc();
+$stmtT->close();
+$tallaActual = $rowTalla['TALLA'] ?? null;
+
+// Edad calculada
+$edad = null;
+$fn   = $pac['FECHA_NACIMIENTO'] ?? '';
+if ($fn && $fn !== '0000-00-00' && $fn !== '') {
+    try {
+        $edad = (new DateTime($fn))->diff(new DateTime())->y;
+    } catch (Exception $e) { $edad = null; }
+}
+
+// Todas las citas del paciente
 $stmtC = $conexion->prepare(
     "SELECT C.IDCITA, C.FECHA_CITA, C.HORA_INICIO, C.HORA_FIN,
             C.ESTADO_CITA,
@@ -40,25 +62,23 @@ $stmtC->execute();
 $citas = $stmtC->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmtC->close();
 
-// Contadores rápidos
-$totalCitas    = count($citas);
-$atendidas     = count(array_filter($citas, fn($c) => $c['IDHISTORIAL']));
-$pendientes    = count(array_filter($citas, fn($c) => $c['ESTADO_CITA'] === 'Pendiente'));
-$confirmadas   = count(array_filter($citas, fn($c) => $c['ESTADO_CITA'] === 'Confirmada'));
-$canceladas    = count(array_filter($citas, fn($c) => in_array($c['ESTADO_CITA'], ['Cancelada','Cancelado'])));
+// Contadores
+$totalCitas = count($citas);
+$atendidas  = count(array_filter($citas, fn($c) => $c['IDHISTORIAL']));
+$pendientes = count(array_filter($citas, fn($c) => $c['ESTADO_CITA'] === 'Pendiente'));
+$canceladas = count(array_filter($citas, fn($c) => in_array($c['ESTADO_CITA'], ['Cancelada','Cancelado'])));
 
-// IMC promedio de atenciones
-$imcs = array_filter(array_column($citas, 'IMC'));
+// IMC promedio
+$imcs    = array_filter(array_column($citas, 'IMC'));
 $imcProm = count($imcs) ? number_format(array_sum($imcs) / count($imcs), 1) : null;
 
-// Helpers
 function badgeClass(string $est): string {
     return match($est) {
-        'Confirmada'           => 'bg-success',
-        'Pendiente'            => 'bg-warning text-dark',
-        'Cancelada','Cancelado'=> 'bg-danger',
-        'A'                    => 'badge-atendida',
-        default                => 'bg-secondary',
+        'Confirmada'            => 'bg-success',
+        'Pendiente'             => 'bg-warning text-dark',
+        'Cancelada','Cancelado' => 'bg-danger',
+        'A'                     => 'badge-atendida',
+        default                 => 'bg-secondary',
     };
 }
 function imcLabel(float $imc): string {
@@ -97,6 +117,12 @@ function imcColor(float $imc): string {
                 </div>
             </div>
             <div class="d-flex flex-wrap gap-3" style="font-size:.85rem;">
+                <?php if ($edad !== null): ?>
+                    <span><i class="bi bi-person-fill text-muted me-1"></i><?php echo $edad; ?> años</span>
+                <?php endif; ?>
+                <?php if ($tallaActual): ?>
+                    <span><i class="bi bi-rulers text-muted me-1"></i><?php echo number_format($tallaActual, 2); ?> m</span>
+                <?php endif; ?>
                 <span><i class="bi bi-telephone text-muted me-1"></i><?php echo htmlspecialchars($pac['TELEFONO'] ?? '—'); ?></span>
                 <span><i class="bi bi-envelope text-muted me-1"></i><?php echo htmlspecialchars($pac['EMAIL'] ?? '—'); ?></span>
             </div>
@@ -154,13 +180,14 @@ function imcColor(float $imc): string {
         </thead>
         <tbody>
         <?php foreach ($citas as $c):
-            $est = $c['IDHISTORIAL'] ? 'A' : $c['ESTADO_CITA'];
+            $est      = $c['IDHISTORIAL'] ? 'A' : $c['ESTADO_CITA'];
             $estLabel = $est === 'A' ? 'Atendida' : $est;
-            $bc = badgeClass($est);
+            $bc       = badgeClass($est);
         ?>
         <tr>
             <td><?php echo date('d/m/Y', strtotime($c['FECHA_CITA'])); ?></td>
-            <td><?php echo substr($c['HORA_INICIO'],0,5); ?>
+            <td>
+                <?php echo substr($c['HORA_INICIO'],0,5); ?>
                 <?php if ($c['HORA_FIN']): ?>
                     <small class="text-muted">– <?php echo substr($c['HORA_FIN'],0,5); ?></small>
                 <?php endif; ?>
@@ -185,7 +212,7 @@ function imcColor(float $imc): string {
             </td>
             <td class="text-center">
                 <?php if ($c['IDHISTORIAL']): ?>
-                    <button class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2"
+                    <button class="btn btn-outline-secondary btn-sm py-0 px-2"
                             onclick="verInforme(<?php echo $c['IDHISTORIAL']; ?>)"
                             title="Ver informe">
                         <i class="bi bi-file-earmark-text"></i>
@@ -200,35 +227,3 @@ function imcColor(float $imc): string {
     </table>
     <?php endif; ?>
 </div>
-
-<!-- Sub-modal para ver informe -->
-<div class="modal fade" id="modalInforme" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header py-2">
-                <h6 class="modal-title"><i class="bi bi-file-earmark-text me-2"></i>Informe de Atención</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="cuerpoInforme">
-                <div class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></div>
-            </div>
-            <div class="modal-footer py-2">
-                <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-printer"></i> Imprimir
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-function verInforme(idHistorial) {
-    document.getElementById('cuerpoInforme').innerHTML =
-        '<div class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></div>';
-    new bootstrap.Modal(document.getElementById('modalInforme')).show();
-    $.get('get_informe_html.php', { id: idHistorial }, function(html) {
-        document.getElementById('cuerpoInforme').innerHTML = html;
-    });
-}
-</script>

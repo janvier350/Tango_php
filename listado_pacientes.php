@@ -300,6 +300,27 @@ $totalRows = $result ? $result->num_rows : 0;
     </div>
 </div>
 
+<!-- ══ MODAL INFORME ════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalInforme" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title"><i class="bi bi-file-earmark-text me-2"></i>Informe de Atención</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cuerpoInforme">
+                <div class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></div>
+            </div>
+            <div class="modal-footer py-2">
+                <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-printer"></i> Imprimir
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="text/javascript" src="./assets/scripts/main.js"></script>
 <script>
@@ -317,6 +338,20 @@ function verHistorial(idPaciente, nombre) {
         .fail(function(xhr) {
             document.getElementById('modalHistorialBody').innerHTML =
                 '<div class="alert alert-danger m-3">Error al cargar el historial (HTTP ' + xhr.status + '). Revisa los logs de PHP.</div>';
+        });
+}
+
+function verInforme(idHistorial) {
+    document.getElementById('cuerpoInforme').innerHTML =
+        '<div class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></div>';
+    new bootstrap.Modal(document.getElementById('modalInforme')).show();
+    $.get('get_informe_html.php', { id: idHistorial })
+        .done(function(html) {
+            document.getElementById('cuerpoInforme').innerHTML = html;
+        })
+        .fail(function(xhr) {
+            document.getElementById('cuerpoInforme').innerHTML =
+                '<div class="alert alert-danger m-3">No se pudo cargar el informe (HTTP ' + xhr.status + ').</div>';
         });
 }
 </script>
