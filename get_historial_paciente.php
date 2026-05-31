@@ -9,10 +9,9 @@ if (!isset($_SESSION["rol"])) { http_response_code(403); exit; }
 $idPaciente = (int)($_GET['id'] ?? 0);
 if (!$idPaciente) { echo '<p class="text-danger p-3">ID no válido.</p>'; exit; }
 
-// Datos del paciente
+// Datos del paciente (solo columnas seguras)
 $stmtP = $conexion->prepare(
-    "SELECT NOMBRES, APELLIDOS, CEDULA, TELEFONO, EMAIL,
-            FECHA_NACIMIENTO, SEXO
+    "SELECT NOMBRES, APELLIDOS, CEDULA, TELEFONO, EMAIL
      FROM AG_PACIENTE WHERE IDPACIENTE = ? LIMIT 1"
 );
 $stmtP->bind_param("i", $idPaciente);
@@ -22,7 +21,7 @@ $stmtP->close();
 
 if (!$pac) { echo '<p class="text-danger p-3">Paciente no encontrado.</p>'; exit; }
 
-// Todas las citas del paciente
+// Todas las citas del paciente (sin H.ESTADO que puede no existir)
 $stmtC = $conexion->prepare(
     "SELECT C.IDCITA, C.FECHA_CITA, C.HORA_INICIO, C.HORA_FIN,
             C.ESTADO_CITA,
@@ -32,7 +31,7 @@ $stmtC = $conexion->prepare(
      FROM AG_CITA C
      LEFT JOIN AG_TIPOCONSULTA TC ON TC.IDTIPOCONSULTA = C.IDTIPOCONSULTA
      LEFT JOIN ADM_DOCTOR D       ON D.IDDOCTOR        = C.IDDOCTOR
-     LEFT JOIN AG_HISTORIAL H     ON H.IDCITA          = C.IDCITA AND H.ESTADO = 'A'
+     LEFT JOIN AG_HISTORIAL H     ON H.IDCITA          = C.IDCITA
      WHERE C.IDPACIENTE = ? AND C.ESTADO = 'A'
      ORDER BY C.FECHA_CITA DESC, C.HORA_INICIO DESC"
 );
@@ -97,34 +96,9 @@ function imcColor(float $imc): string {
                     <small class="text-muted">C.I. <?php echo htmlspecialchars($pac['CEDULA'] ?? '—'); ?></small>
                 </div>
             </div>
-            <div class="row g-1" style="font-size:.85rem;">
-                <div class="col-auto">
-                    <i class="bi bi-telephone text-muted"></i>
-                    <?php echo htmlspecialchars($pac['TELEFONO'] ?? '—'); ?>
-                </div>
-                <div class="col-auto text-muted">·</div>
-                <div class="col-auto">
-                    <i class="bi bi-envelope text-muted"></i>
-                    <?php echo htmlspecialchars($pac['EMAIL'] ?? '—'); ?>
-                </div>
-                <?php if ($pac['SEXO']): ?>
-                <div class="col-auto text-muted">·</div>
-                <div class="col-auto">
-                    <i class="bi bi-gender-<?php echo strtolower($pac['SEXO']) === 'm' ? 'male' : 'female'; ?> text-muted"></i>
-                    <?php echo $pac['SEXO'] === 'M' ? 'Masculino' : 'Femenino'; ?>
-                </div>
-                <?php endif; ?>
-                <?php if ($pac['FECHA_NACIMIENTO'] && $pac['FECHA_NACIMIENTO'] !== '0000-00-00'): ?>
-                <div class="col-auto text-muted">·</div>
-                <div class="col-auto">
-                    <i class="bi bi-cake2 text-muted"></i>
-                    <?php
-                    $fn = new DateTime($pac['FECHA_NACIMIENTO']);
-                    $edad = $fn->diff(new DateTime())->y;
-                    echo $edad . ' años';
-                    ?>
-                </div>
-                <?php endif; ?>
+            <div class="d-flex flex-wrap gap-3" style="font-size:.85rem;">
+                <span><i class="bi bi-telephone text-muted me-1"></i><?php echo htmlspecialchars($pac['TELEFONO'] ?? '—'); ?></span>
+                <span><i class="bi bi-envelope text-muted me-1"></i><?php echo htmlspecialchars($pac['EMAIL'] ?? '—'); ?></span>
             </div>
         </div>
 

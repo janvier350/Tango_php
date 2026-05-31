@@ -310,9 +310,14 @@ function verHistorial(idPaciente, nombre) {
 
     new bootstrap.Modal(document.getElementById('modalHistorial')).show();
 
-    $.get('get_historial_paciente.php', { id: idPaciente }, function(html) {
-        document.getElementById('modalHistorialBody').innerHTML = html;
-    });
+    $.get('get_historial_paciente.php', { id: idPaciente })
+        .done(function(html) {
+            document.getElementById('modalHistorialBody').innerHTML = html;
+        })
+        .fail(function(xhr) {
+            document.getElementById('modalHistorialBody').innerHTML =
+                '<div class="alert alert-danger m-3">Error al cargar el historial (HTTP ' + xhr.status + '). Revisa los logs de PHP.</div>';
+        });
 }
 </script>
 </body>
