@@ -11,7 +11,7 @@ if (!$idPaciente) { echo '<p class="text-danger p-3">ID no válido.</p>'; exit; 
 
 // Datos del paciente
 $stmtP = $conexion->prepare(
-    "SELECT NOMBRES, APELLIDOS, CEDULA, TELEFONO, EMAIL, FECHANACIMIENTO
+    "SELECT NOMBRES, APELLIDOS, CEDULA, TELEFONO, EMAIL, FECHANACIMIENTO, SEX, GENDER
      FROM AG_PACIENTE WHERE IDPACIENTE = ? LIMIT 1"
 );
 $stmtP->bind_param("i", $idPaciente);
@@ -123,6 +123,15 @@ function imcColor(float $imc): string {
                 <?php if ($tallaActual): ?>
                     <?php $tallaM = $tallaActual > 3 ? $tallaActual / 100 : $tallaActual; ?>
                     <span><i class="bi bi-rulers text-muted me-1"></i><?php echo number_format($tallaM, 2); ?> m</span>
+                <?php endif; ?>
+                <?php
+                    $sexo   = $pac['SEX']    ?? '';
+                    $genero = $pac['GENDER'] ?? '';
+                    $invalid = ['', 'Default Select', 'default select'];
+                    $mostrar = !in_array($genero, $invalid) ? $genero : (!in_array($sexo, $invalid) ? $sexo : null);
+                    if ($mostrar):
+                ?>
+                    <span><i class="bi bi-gender-ambiguous text-muted me-1"></i><?php echo htmlspecialchars($mostrar); ?></span>
                 <?php endif; ?>
                 <span><i class="bi bi-telephone text-muted me-1"></i><?php echo htmlspecialchars($pac['TELEFONO'] ?? '—'); ?></span>
                 <span><i class="bi bi-envelope text-muted me-1"></i><?php echo htmlspecialchars($pac['EMAIL'] ?? '—'); ?></span>
