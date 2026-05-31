@@ -275,7 +275,7 @@ for ($i = 6; $i >= 0; $i--) {
 
                     <!-- Gráfico citas últimos 7 días -->
                     <div class="col-md-5">
-                        <div class="card shadow-sm h-100">
+                        <div class="card shadow-sm">
                             <div class="card-body">
                                 <p class="section-title"><i class="bi bi-bar-chart-line me-1"></i>Citas — últimos 7 días</p>
                                 <canvas id="chartSemana" height="180"></canvas>
@@ -285,7 +285,7 @@ for ($i = 6; $i >= 0; $i--) {
 
                     <!-- Mini stats adicionales -->
                     <div class="col-md-3">
-                        <div class="card shadow-sm h-100">
+                        <div class="card shadow-sm">
                             <div class="card-body">
                                 <p class="section-title"><i class="bi bi-pie-chart me-1"></i>Este mes</p>
                                 <ul class="list-group list-group-flush">
@@ -312,7 +312,7 @@ for ($i = 6; $i >= 0; $i--) {
 
                     <!-- Últimas atenciones -->
                     <div class="col-md-4">
-                        <div class="card shadow-sm h-100">
+                        <div class="card shadow-sm">
                             <div class="card-body">
                                 <p class="section-title"><i class="bi bi-clock-history me-1"></i>Últimas atenciones</p>
                                 <ul class="list-group list-group-flush">
