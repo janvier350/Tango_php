@@ -154,6 +154,16 @@ $doctorAtiende = ($sessionNombres || $sessionApellidos)
                     <i class="bi bi-mic-fill"></i> Iniciar dictado
                 </button>
 
+                <!-- Toggle idioma -->
+                <div class="d-flex align-items-center gap-1" title="Idioma del micrófono">
+                    <span id="langES" class="badge"
+                          style="cursor:pointer;background:#0264d6;font-size:.7rem;"
+                          onclick="setLang('es')">ES</span>
+                    <span id="langEN" class="badge bg-secondary"
+                          style="cursor:pointer;font-size:.7rem;"
+                          onclick="setLang('en')">EN</span>
+                </div>
+
                 <div id="micStatus" class="d-none d-flex align-items-center gap-2">
                     <span class="badge bg-danger d-flex align-items-center gap-1">
                         <span class="mic-pulse">●</span> Escuchando
@@ -163,7 +173,7 @@ $doctorAtiende = ($sessionNombres || $sessionApellidos)
 
                 <small class="text-muted ms-auto">
                     <i class="bi bi-info-circle me-1"></i>
-                    Chrome / Edge · Idioma: Español
+                    Chrome / Edge
                 </small>
             </div>
 
@@ -385,6 +395,24 @@ function imprimirInforme(){
 let recognition   = null;
 let dictadoActivo = false;
 let savedRange    = null;   // guarda posición del cursor al iniciar dictado
+let micLang       = 'es-EC';
+
+function setLang(lang) {
+    if (dictadoActivo) return; // no cambiar mientras escucha
+    if (lang === 'es') {
+        micLang = 'es-EC';
+        document.getElementById('langES').style.background = '#0264d6';
+        document.getElementById('langES').classList.remove('bg-secondary');
+        document.getElementById('langEN').style.background = '';
+        document.getElementById('langEN').classList.add('bg-secondary');
+    } else {
+        micLang = 'en-US';
+        document.getElementById('langEN').style.background = '#198754';
+        document.getElementById('langEN').classList.remove('bg-secondary');
+        document.getElementById('langES').style.background = '';
+        document.getElementById('langES').classList.add('bg-secondary');
+    }
+}
 
 function toggleDictado() {
     if (!dictadoActivo) {
@@ -406,7 +434,7 @@ function iniciarDictado() {
     savedRange = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0).cloneRange() : null;
 
     recognition = new SR();
-    recognition.lang         = 'es-EC';   // Español Ecuador; cambia a 'es-ES' si prefieres
+    recognition.lang         = micLang;
     recognition.continuous   = true;       // sigue escuchando sin timeout
     recognition.interimResults = true;     // muestra texto parcial en tiempo real
 
