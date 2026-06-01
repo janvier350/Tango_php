@@ -382,8 +382,9 @@ function imprimirInforme(){
 }
 
 // ── DICTADO POR VOZ ───────────────────────────────────────────────────
-let recognition  = null;
+let recognition   = null;
 let dictadoActivo = false;
+let savedRange    = null;   // guarda posición del cursor al iniciar dictado
 
 function toggleDictado() {
     if (!dictadoActivo) {
@@ -399,6 +400,10 @@ function iniciarDictado() {
         alert('Tu navegador no soporta dictado por voz.\nUsa Google Chrome o Microsoft Edge.');
         return;
     }
+
+    // Guardar posición actual del cursor en el editor antes de empezar
+    var sel = window.getSelection();
+    savedRange = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0).cloneRange() : null;
 
     recognition = new SR();
     recognition.lang         = 'es-EC';   // Español Ecuador; cambia a 'es-ES' si prefieres
@@ -420,19 +425,29 @@ function iniciarDictado() {
 
         // Insertar texto final en el editor Summernote
         if (finalText) {
-            // El editor pierde foco durante el dictado; hay que devolverle el cursor
             var $editable = $('.note-editable').first();
             $editable[0].focus();
-            // Si no hay selección activa, colocar cursor al final del contenido
-            var sel = window.getSelection();
-            if (!sel || sel.rangeCount === 0) {
+
+            // Restaurar posición guardada; si no hay, ir al final
+            var sel2 = window.getSelection();
+            sel2.removeAllRanges();
+            if (savedRange) {
+                try { sel2.addRange(savedRange); } catch(e) { savedRange = null; }
+            }
+            if (!savedRange || sel2.rangeCount === 0) {
                 var range = document.createRange();
                 range.selectNodeContents($editable[0]);
                 range.collapse(false);
-                sel.removeAllRanges();
-                sel.addRange(range);
+                sel2.removeAllRanges();
+                sel2.addRange(range);
             }
+
             $('#editorInforme').summernote('insertText', finalText);
+
+            // Actualizar savedRange a la nueva posición (después del texto insertado)
+            var sel3 = window.getSelection();
+            savedRange = (sel3 && sel3.rangeCount > 0) ? sel3.getRangeAt(0).cloneRange() : null;
+
             document.getElementById('interimText').textContent = '';
         }
     };
