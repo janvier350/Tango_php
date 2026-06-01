@@ -298,7 +298,7 @@ for ($i = 6; $i >= 0; $i--) {
                                         <span class="fw-bold"><?php echo $citasPendientes; ?></span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                        <span><span style="color:#6f42c1" class="me-1">●</span> Atendidas</span>
+                                        <span><span class="badge me-1" style="background:#6f42c1;">●</span> Atendidas</span>
                                         <span class="fw-bold"><?php echo $citasAtendidas; ?></span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center px-0">
