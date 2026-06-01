@@ -373,13 +373,14 @@ for ($i = 6; $i >= 0; $i--) {
                                         <?php while ($c = $resHoy->fetch_assoc()): ?>
                                             <?php
                                             $est = $c['ESTADO_CITA'];
-                                            $badgeClass = match($est) {
-                                                'Confirmada'        => 'bg-success',
-                                                'Pendiente'         => 'bg-warning text-dark',
-                                                'A'                 => 'bg-purple',
-                                                'Cancelada','Cancelado' => 'bg-danger',
-                                                default             => 'bg-secondary'
-                                            };
+                                            switch ($est) {
+                                                case 'Confirmada':            $badgeClass = 'bg-success'; break;
+                                                case 'Pendiente':             $badgeClass = 'bg-warning text-dark'; break;
+                                                case 'A':                     $badgeClass = 'bg-purple'; break;
+                                                case 'Cancelada':
+                                                case 'Cancelado':             $badgeClass = 'bg-danger'; break;
+                                                default:                      $badgeClass = 'bg-secondary';
+                                            }
                                             $estLabel = $est === 'A' ? 'Atendida' : $est;
                                             ?>
                                             <tr>

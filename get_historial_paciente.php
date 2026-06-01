@@ -64,30 +64,34 @@ $stmtC->close();
 
 // Contadores
 $totalCitas = count($citas);
-$atendidas  = count(array_filter($citas, fn($c) => $c['IDHISTORIAL']));
-$pendientes = count(array_filter($citas, fn($c) => $c['ESTADO_CITA'] === 'Pendiente'));
-$canceladas = count(array_filter($citas, fn($c) => in_array($c['ESTADO_CITA'], ['Cancelada','Cancelado'])));
+$atendidas  = 0; $pendientes = 0; $canceladas = 0;
+foreach ($citas as $_c) {
+    if ($_c['IDHISTORIAL']) $atendidas++;
+    if ($_c['ESTADO_CITA'] === 'Pendiente') $pendientes++;
+    if (in_array($_c['ESTADO_CITA'], ['Cancelada','Cancelado'])) $canceladas++;
+}
 
 // IMC promedio
 $imcs    = array_filter(array_column($citas, 'IMC'));
 $imcProm = count($imcs) ? number_format(array_sum($imcs) / count($imcs), 1) : null;
 
-function badgeClass(string $est): string {
-    return match($est) {
-        'Confirmada'            => 'bg-success',
-        'Pendiente'             => 'bg-warning text-dark',
-        'Cancelada','Cancelado' => 'bg-danger',
-        'A'                     => 'badge-atendida',
-        default                 => 'bg-secondary',
-    };
+function badgeClass($est) {
+    switch ($est) {
+        case 'Confirmada':  return 'bg-success';
+        case 'Pendiente':   return 'bg-warning text-dark';
+        case 'Cancelada':
+        case 'Cancelado':   return 'bg-danger';
+        case 'A':           return 'badge-atendida';
+        default:            return 'bg-secondary';
+    }
 }
-function imcLabel(float $imc): string {
+function imcLabel($imc) {
     if ($imc < 18.5) return 'Bajo peso';
     if ($imc < 25)   return 'Normal';
     if ($imc < 30)   return 'Sobrepeso';
     return 'Obesidad';
 }
-function imcColor(float $imc): string {
+function imcColor($imc) {
     if ($imc < 18.5) return '#0dcaf0';
     if ($imc < 25)   return '#198754';
     if ($imc < 30)   return '#ffc107';
