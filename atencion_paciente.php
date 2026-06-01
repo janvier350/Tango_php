@@ -420,6 +420,18 @@ function iniciarDictado() {
 
         // Insertar texto final en el editor Summernote
         if (finalText) {
+            // El editor pierde foco durante el dictado; hay que devolverle el cursor
+            var $editable = $('.note-editable').first();
+            $editable[0].focus();
+            // Si no hay selección activa, colocar cursor al final del contenido
+            var sel = window.getSelection();
+            if (!sel || sel.rangeCount === 0) {
+                var range = document.createRange();
+                range.selectNodeContents($editable[0]);
+                range.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
             $('#editorInforme').summernote('insertText', finalText);
             document.getElementById('interimText').textContent = '';
         }
