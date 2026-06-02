@@ -108,6 +108,20 @@ $f_texto  = $_GET['f_texto']  ?? '';
         .filtros-card { background: #f8f9fa; border-left: 4px solid #0d6efd; }
         tfoot input { width: 100%; font-size: 0.7rem; padding: 2px 4px; border: 1px solid #ced4da; border-radius: 3px; }
         .dataTables_wrapper .dataTables_filter { display: none; }
+
+        /* Dictado por voz */
+        .btn-mic { transition: all .2s; }
+        .btn-mic.escuchando {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            color: #fff;
+            animation: mic-pulse 1.2s infinite;
+        }
+        @keyframes mic-pulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(220,53,69,.5); }
+            50%      { box-shadow: 0 0 0 5px rgba(220,53,69,0); }
+        }
+        .mic-interim { min-height: 1rem; }
     </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -206,8 +220,20 @@ $f_texto  = $_GET['f_texto']  ?? '';
                     </div>
 
                     <div class="col-md-6">
-                        <label class="small fw-bold">Descripcion</label>
-                        <input type="text" name="c" class="form-control form-control-sm" placeholder="Detalle" required>
+                        <label class="small fw-bold d-flex align-items-center gap-1">Descripcion
+                            <span id="mic_status_c" class="text-danger small d-none fw-normal">
+                                <i class="bi bi-record-circle-fill"></i> Escuchando...
+                            </span>
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="c" id="campo_concepto" class="form-control form-control-sm" placeholder="Detalle" required>
+                            <button type="button" class="btn btn-outline-secondary btn-mic" id="mic_btn_c"
+                                    onclick="toggleDictado('campo_concepto','mic_btn_c','mic_status_c','interim_c')"
+                                    title="Dictado por voz">
+                                <i class="bi bi-mic"></i>
+                            </button>
+                        </div>
+                        <div id="interim_c" class="mic-interim text-muted fst-italic small"></div>
                     </div>
                     
                     <div class="col-md-2">
@@ -229,10 +255,22 @@ $f_texto  = $_GET['f_texto']  ?? '';
                     </div>
                 -->
                     <div class="col-md-3">
-                        <label class="small fw-bold">Doc. Soporte</label>
-                        <input type="text" name="doc" id="doc_soporte" class="form-control form-control-sm <?php echo $error_doc ? 'is-invalid' : ''; ?>"
-                               placeholder="# factura ..." autocomplete="off"
-                               value="<?php echo $error_doc ? htmlspecialchars($_POST['doc'] ?? '') : ''; ?>">
+                        <label class="small fw-bold d-flex align-items-center gap-1">Doc. Soporte
+                            <span id="mic_status_doc" class="text-danger small d-none fw-normal">
+                                <i class="bi bi-record-circle-fill"></i> Escuchando...
+                            </span>
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="doc" id="doc_soporte" class="form-control form-control-sm <?php echo $error_doc ? 'is-invalid' : ''; ?>"
+                                   placeholder="# factura ..." autocomplete="off"
+                                   value="<?php echo $error_doc ? htmlspecialchars($_POST['doc'] ?? '') : ''; ?>">
+                            <button type="button" class="btn btn-outline-secondary btn-mic" id="mic_btn_doc"
+                                    onclick="toggleDictado('doc_soporte','mic_btn_doc','mic_status_doc','interim_doc')"
+                                    title="Dictado por voz">
+                                <i class="bi bi-mic"></i>
+                            </button>
+                        </div>
+                        <div id="interim_doc" class="mic-interim text-muted fst-italic small"></div>
                         <div id="doc_feedback" class="form-text" style="font-size:0.7rem;"></div>
                     </div>
 
@@ -660,6 +698,99 @@ $f_texto  = $_GET['f_texto']  ?? '';
     </div>
   </div>
 </div>
+
+<!-- Dictado por voz -->
+<script>
+var micRecognition  = null;
+var micActivo       = false;
+var micCampoActual  = null;
+var micBtnActual    = null;
+var micStatusActual = null;
+var micInterimActual= null;
+var micLang         = 'es-EC';
+
+function toggleDictado(campoId, btnId, statusId, interimId) {
+    if (micActivo && micCampoActual === campoId) {
+        detenerDictado();
+        return;
+    }
+    if (micActivo) detenerDictado(); // detener el anterior si hay uno activo
+    iniciarDictado(campoId, btnId, statusId, interimId);
+}
+
+function iniciarDictado(campoId, btnId, statusId, interimId) {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+        alert('El dictado por voz requiere Google Chrome o Microsoft Edge.');
+        return;
+    }
+
+    micCampoActual   = campoId;
+    micBtnActual     = btnId;
+    micStatusActual  = statusId;
+    micInterimActual = interimId;
+
+    micRecognition = new SR();
+    micRecognition.lang           = micLang;
+    micRecognition.continuous     = true;
+    micRecognition.interimResults = true;
+
+    micRecognition.onresult = function(event) {
+        var interim = '', finalText = '';
+        for (var i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) finalText += event.results[i][0].transcript + ' ';
+            else interim += event.results[i][0].transcript;
+        }
+        document.getElementById(interimId).textContent = interim;
+        if (finalText) {
+            var campo = document.getElementById(campoId);
+            campo.value += finalText;
+            campo.dispatchEvent(new Event('input')); // dispara validaciones existentes
+            document.getElementById(interimId).textContent = '';
+        }
+    };
+
+    micRecognition.onerror = function(e) {
+        if (e.error === 'no-speech') return;
+        detenerDictado();
+        if (e.error === 'not-allowed') alert('Permiso de micrófono denegado. Habilítalo en la barra del navegador.');
+    };
+
+    micRecognition.onend = function() {
+        if (micActivo) micRecognition.start(); // auto-reinicio por timeout
+    };
+
+    micRecognition.start();
+    micActivo = true;
+
+    var btn = document.getElementById(btnId);
+    btn.classList.add('escuchando');
+    btn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+    btn.title = 'Detener dictado';
+    document.getElementById(statusId).classList.remove('d-none');
+}
+
+function detenerDictado() {
+    micActivo = false;
+    if (micRecognition) { micRecognition.stop(); micRecognition = null; }
+
+    if (micBtnActual) {
+        var btn = document.getElementById(micBtnActual);
+        if (btn) {
+            btn.classList.remove('escuchando');
+            btn.innerHTML = '<i class="bi bi-mic"></i>';
+            btn.title = 'Dictado por voz';
+        }
+    }
+    if (micStatusActual)  document.getElementById(micStatusActual)?.classList.add('d-none');
+    if (micInterimActual) document.getElementById(micInterimActual).textContent = '';
+
+    micCampoActual = micBtnActual = micStatusActual = micInterimActual = null;
+}
+
+// Detener dictado si el usuario envía el formulario
+document.querySelector('form[action="movimientos.php"]')?.addEventListener('submit', detenerDictado);
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
