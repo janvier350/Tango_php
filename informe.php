@@ -36,9 +36,10 @@ $sql_proy = "
 $stmt1 = $conn->prepare($sql_proy);
 $stmt1->bind_param("iss", $id_oficina_consulta, $fecha_inicio, $fecha_fin);
 $stmt1->execute();
+$res1 = $stmt1->get_result();
 
 $grupos_proy = [];
-while ($row = $stmt1->get_result()->fetch_assoc()) {
+while ($row = $res1->fetch_assoc()) {
     $grupos_proy[$row['nombre_proyecto']][] = $row;
 }
 
@@ -58,9 +59,10 @@ $sql_inf = "
 $stmt2 = $conn->prepare($sql_inf);
 $stmt2->bind_param("iss", $id_oficina_consulta, $fecha_inicio, $fecha_fin);
 $stmt2->execute();
+$res2 = $stmt2->get_result();
 
 $grupos_inf = [];
-while ($row = $stmt2->get_result()->fetch_assoc()) {
+while ($row = $res2->fetch_assoc()) {
     $grupos_inf[$row['inf_fin']][] = $row;
 }
 
