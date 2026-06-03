@@ -508,6 +508,96 @@ $res_gastos = $stmt_res->get_result();
 </div>
 
 <?php
+// ── Resumen Unificado INF.FIN (TD2) ──────────────────────────────────
+$sql_unif = "
+    SELECT
+        r.ID_REPOSICION,
+        r.REPOSICION AS nombre,
+        SUM(CASE WHEN m.ESTADO='A' THEN m.importe_recibido  ELSE 0 END) AS total_ing,
+        SUM(CASE WHEN m.ESTADO='A' THEN m.importe_entregado ELSE 0 END) AS total_egr
+    FROM movimientos m
+    INNER JOIN CAT_REPOSICION r ON m.inf_fin = r.ID_REPOSICION
+    WHERE m.ID_OFICINA = ? AND m.fecha BETWEEN ? AND ?
+    GROUP BY r.ID_REPOSICION, r.REPOSICION
+    ORDER BY (SUM(CASE WHEN m.ESTADO='A' THEN m.importe_recibido ELSE 0 END) +
+              SUM(CASE WHEN m.ESTADO='A' THEN m.importe_entregado ELSE 0 END)) DESC";
+
+$stmt_unif = $conn->prepare($sql_unif);
+$stmt_unif->bind_param("iss", $id_oficina_consulta, $fecha_inicio, $fecha_fin);
+$stmt_unif->execute();
+$unif_data    = $stmt_unif->get_result()->fetch_all(MYSQLI_ASSOC);
+$unif_tot_ing = array_sum(array_column($unif_data, 'total_ing'));
+$unif_tot_egr = array_sum(array_column($unif_data, 'total_egr'));
+$unif_tot_sal = $unif_tot_ing - $unif_tot_egr;
+?>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header fw-bold text-white d-flex align-items-center" style="background:#2c3e50;">
+                <i class="bi bi-table me-2"></i> Resumen por Información Financiera (INF. FIN.)
+                <span class="ms-auto badge bg-secondary"><?php echo count($unif_data); ?> categorías</span>
+            </div>
+            <div class="card-body p-0">
+                <?php if (empty($unif_data)): ?>
+                    <p class="text-center text-muted py-3">Sin datos para el período seleccionado.</p>
+                <?php else: ?>
+                <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="ps-3">INF. FINANCIERA</th>
+                            <th class="text-end" style="color:#6ee097;">INGRESOS</th>
+                            <th class="text-end" style="color:#f28b82;">EGRESOS</th>
+                            <th class="text-end">SALDO</th>
+                            <th class="text-center" style="width:60px;">VER</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($unif_data as $u):
+                            $sal_u = $u['total_ing'] - $u['total_egr'];
+                        ?>
+                        <tr>
+                            <td class="ps-3 small fw-semibold"><?php echo htmlspecialchars($u['nombre']); ?></td>
+                            <td class="text-end small <?php echo $u['total_ing'] > 0 ? 'text-success fw-bold' : 'text-muted'; ?>">
+                                $<?php echo number_format($u['total_ing'], 2); ?>
+                            </td>
+                            <td class="text-end small <?php echo $u['total_egr'] > 0 ? 'text-danger fw-bold' : 'text-muted'; ?>">
+                                $<?php echo number_format($u['total_egr'], 2); ?>
+                            </td>
+                            <td class="text-end small fw-bold <?php echo $sal_u >= 0 ? 'text-success' : 'text-danger'; ?>">
+                                $<?php echo number_format($sal_u, 2); ?>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-secondary py-0 px-1 lh-1" style="font-size:0.7rem;"
+                                    onclick="verDetalleUnif(<?php echo $u['ID_REPOSICION']; ?>, '<?php echo htmlspecialchars(addslashes($u['nombre'])); ?>')"
+                                    title="Ver detalle">
+                                    <i class="bi bi-list-ul"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                    <tfoot style="background:#ecf0f1;" class="fw-bold">
+                        <tr>
+                            <td class="ps-3">TOTAL</td>
+                            <td class="text-end text-success">$<?php echo number_format($unif_tot_ing, 2); ?></td>
+                            <td class="text-end text-danger">$<?php echo number_format($unif_tot_egr, 2); ?></td>
+                            <td class="text-end <?php echo $unif_tot_sal >= 0 ? 'text-success' : 'text-danger'; ?>">
+                                $<?php echo number_format($unif_tot_sal, 2); ?>
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php
 // ── Resumen por Proyecto ──────────────────────────────────────────────
 $sql_proy = "SELECT
     p.ID_PROYECTO, p.PROYECTO,
@@ -1183,7 +1273,119 @@ function verDetalleInfFin(idReposicion, nombre) {
             '<tr><td colspan="8" class="text-center text-danger">Error al cargar datos.</td></tr>';
     });
 }
+
+function verDetalleUnif(idReposicion, nombre) {
+    document.getElementById('unif_titulo').textContent = nombre;
+    document.getElementById('unif_loading').classList.remove('d-none');
+    document.getElementById('unif_contenido').classList.add('d-none');
+    new bootstrap.Modal(document.getElementById('modalDetalleUnif')).show();
+
+    var params = new URLSearchParams(window.location.search);
+    var desde = params.get('desde') || '<?php echo $fecha_inicio; ?>';
+    var hasta = params.get('hasta') || '<?php echo $fecha_fin; ?>';
+    var ofic  = params.get('id_oficina') || '<?php echo $id_oficina_consulta; ?>';
+
+    fetch('ajax_detalle_inf_fin_unificado.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'id_reposicion=' + idReposicion + '&id_oficina=' + ofic + '&desde=' + desde + '&hasta=' + hasta
+    })
+    .then(r => r.json())
+    .then(function(res) {
+        document.getElementById('unif_loading').classList.add('d-none');
+        document.getElementById('unif_contenido').classList.remove('d-none');
+        if (!res.success) {
+            document.getElementById('unif_tbody').innerHTML =
+                '<tr><td colspan="9" class="text-center text-danger">' + (res.msg || 'Error') + '</td></tr>';
+            return;
+        }
+        var html = '';
+        res.movimientos.forEach(function(m) {
+            var anulado = m.ESTADO !== 'A';
+            var estBadge = anulado
+                ? '<span class="badge bg-danger">Anulado</span>'
+                : '<span class="badge bg-success">Activo</span>';
+            var ing = parseFloat(m.importe_recibido) > 0
+                ? '<span class="text-success fw-bold">$' + parseFloat(m.importe_recibido).toFixed(2) + '</span>'
+                : '<span class="text-muted">—</span>';
+            var egr = parseFloat(m.importe_entregado) > 0
+                ? '<span class="text-danger fw-bold">$' + parseFloat(m.importe_entregado).toFixed(2) + '</span>'
+                : '<span class="text-muted">—</span>';
+            html += '<tr class="' + (anulado ? 'table-secondary text-decoration-line-through' : '') + '">' +
+                '<td class="small">' + m.id + '</td>' +
+                '<td class="small">' + m.fecha + '</td>' +
+                '<td class="small">' + (m.intermediario || '—') + '</td>' +
+                '<td class="small">' + (m.concepto || '—') + '</td>' +
+                '<td class="small">' + (m.doc_soporte || '—') + '</td>' +
+                '<td class="text-end">' + ing + '</td>' +
+                '<td class="text-end">' + egr + '</td>' +
+                '<td>' + estBadge + '</td>' +
+                '<td class="small">' + (m.nombre_usuario || '—') + '</td>' +
+                '</tr>';
+        });
+        if (!html) html = '<tr><td colspan="9" class="text-center text-muted py-3">Sin movimientos en este período.</td></tr>';
+        document.getElementById('unif_tbody').innerHTML = html;
+        var salNum = res.total_ing - res.total_egr;
+        document.getElementById('unif_total_ing').textContent = '$' + parseFloat(res.total_ing).toFixed(2);
+        document.getElementById('unif_total_egr').textContent = '$' + parseFloat(res.total_egr).toFixed(2);
+        var salEl = document.getElementById('unif_saldo');
+        salEl.textContent = '$' + Math.abs(salNum).toFixed(2);
+        salEl.className = 'fw-bold ' + (salNum >= 0 ? 'text-success' : 'text-danger');
+    })
+    .catch(function() {
+        document.getElementById('unif_loading').classList.add('d-none');
+        document.getElementById('unif_contenido').classList.remove('d-none');
+        document.getElementById('unif_tbody').innerHTML =
+            '<tr><td colspan="9" class="text-center text-danger">Error al cargar datos.</td></tr>';
+    });
+}
 </script>
+
+<!-- Modal Detalle Unificado INF.FIN -->
+<div class="modal fade" id="modalDetalleUnif" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background:#2c3e50;">
+                <h5 class="modal-title">
+                    <i class="bi bi-table me-2"></i> Detalle INF.FIN: <span id="unif_titulo"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="unif_loading" class="text-center py-4">
+                    <div class="spinner-border text-secondary" role="status"></div>
+                    <p class="mt-2 text-muted small">Cargando...</p>
+                </div>
+                <div id="unif_contenido" class="d-none">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>#</th>
+                                <th>Fecha</th>
+                                <th>Beneficiario</th>
+                                <th>Descripción</th>
+                                <th>Documento</th>
+                                <th class="text-end" style="color:#6ee097;">Ingreso</th>
+                                <th class="text-end" style="color:#f28b82;">Egreso</th>
+                                <th>Estado</th>
+                                <th>Usuario</th>
+                            </tr>
+                        </thead>
+                        <tbody id="unif_tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between py-2" style="background:#f8f9fa;">
+                <div class="small">
+                    <span class="me-3">Total Ingresos: <strong class="text-success" id="unif_total_ing">$0.00</strong></span>
+                    <span class="me-3">Total Egresos: <strong class="text-danger" id="unif_total_egr">$0.00</strong></span>
+                    <span>Saldo: <strong id="unif_saldo" class="text-success">$0.00</strong></span>
+                </div>
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
