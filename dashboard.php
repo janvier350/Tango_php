@@ -506,11 +506,157 @@ $res_gastos = $stmt_res->get_result();
         </div>
     </div>
 </div>
+
+<?php
+// ── Resumen por Proyecto ──────────────────────────────────────────────
+$sql_proy = "SELECT
+    p.ID_PROYECTO, p.PROYECTO,
+    SUM(CASE WHEN m.ESTADO='A' THEN m.importe_recibido  ELSE 0 END) AS total_ing,
+    SUM(CASE WHEN m.ESTADO='A' THEN m.importe_entregado ELSE 0 END) AS total_egr
+FROM movimientos m
+INNER JOIN PROYECTOS p ON m.ID_PROYECTO = p.ID_PROYECTO
+WHERE m.ID_OFICINA = ? AND m.fecha BETWEEN ? AND ?
+GROUP BY p.ID_PROYECTO, p.PROYECTO
+ORDER BY (SUM(CASE WHEN m.ESTADO='A' THEN m.importe_entregado ELSE 0 END)) DESC";
+
+$stmt_proy = $conn->prepare($sql_proy);
+$stmt_proy->bind_param("iss", $id_oficina_actual, $fecha_inicio, $fecha_fin);
+$stmt_proy->execute();
+$res_proy = $stmt_proy->get_result();
+
+$proyectos_data = [];
+while ($p = $res_proy->fetch_assoc()) $proyectos_data[] = $p;
+
+$proy_labels = json_encode(array_column($proyectos_data, 'PROYECTO'));
+$proy_ing    = json_encode(array_map(fn($p) => round($p['total_ing'], 2), $proyectos_data));
+$proy_egr    = json_encode(array_map(fn($p) => round($p['total_egr'], 2), $proyectos_data));
+?>
+
+<div class="row mb-4">
+    <!-- Tabla resumen por proyecto -->
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header fw-bold text-white" style="background:#2c3e50;">
+                <i class="bi bi-kanban-fill me-2"></i> Resumen por Proyecto
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0" style="font-size:0.78rem;">
+                    <thead class="text-center" style="background:#ecf0f1;">
+                        <tr>
+                            <th class="text-start ps-2">PROYECTO</th>
+                            <th class="text-success">INGRESOS</th>
+                            <th class="text-danger">EGRESOS</th>
+                            <th>SALDO</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php if (empty($proyectos_data)): ?>
+                        <tr><td colspan="5" class="text-center text-muted small py-3">Sin proyectos en el período</td></tr>
+                    <?php else: foreach ($proyectos_data as $p):
+                        $saldo = $p['total_ing'] - $p['total_egr'];
+                    ?>
+                        <tr>
+                            <td class="ps-2"><?php echo htmlspecialchars($p['PROYECTO']); ?></td>
+                            <td class="text-end text-success fw-bold">$<?php echo number_format($p['total_ing'], 2); ?></td>
+                            <td class="text-end text-danger fw-bold">$<?php echo number_format($p['total_egr'], 2); ?></td>
+                            <td class="text-end fw-bold <?php echo $saldo >= 0 ? 'text-success' : 'text-danger'; ?>">
+                                $<?php echo number_format($saldo, 2); ?>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm py-0 px-1 lh-1" style="font-size:0.7rem;background:#2c3e50;color:#fff;"
+                                    onclick="verDetalleProy(<?php echo $p['ID_PROYECTO']; ?>, '<?php echo htmlspecialchars(addslashes($p['PROYECTO'])); ?>')"
+                                    title="Ver movimientos">
+                                    <i class="bi bi-list-ul"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                    </tbody>
+                    <?php if (!empty($proyectos_data)):
+                        $tot_ing = array_sum(array_column($proyectos_data, 'total_ing'));
+                        $tot_egr = array_sum(array_column($proyectos_data, 'total_egr'));
+                        $tot_sal = $tot_ing - $tot_egr;
+                    ?>
+                    <tfoot style="background:#ecf0f1;" class="fw-bold">
+                        <tr>
+                            <td class="ps-2">TOTAL</td>
+                            <td class="text-end text-success">$<?php echo number_format($tot_ing, 2); ?></td>
+                            <td class="text-end text-danger">$<?php echo number_format($tot_egr, 2); ?></td>
+                            <td class="text-end <?php echo $tot_sal >= 0 ? 'text-success' : 'text-danger'; ?>">
+                                $<?php echo number_format($tot_sal, 2); ?>
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                    <?php endif; ?>
+                </table>
+            </div>
         </div>
-        
     </div>
 
-    <script>
+    <!-- Gráfico por proyecto -->
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header fw-bold text-white" style="background:#2c3e50;">
+                <i class="bi bi-bar-chart-fill me-2"></i> Distribución por Proyecto
+            </div>
+            <div class="card-body">
+                <?php if (empty($proyectos_data)): ?>
+                    <p class="text-center text-muted mt-4">Sin datos para el período seleccionado.</p>
+                <?php else: ?>
+                    <canvas id="chartProyectos" style="max-height:280px;"></canvas>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+        <?php if (!empty($proyectos_data)): ?>
+        (function() {
+            var ctxP = document.getElementById('chartProyectos').getContext('2d');
+            new Chart(ctxP, {
+                type: 'bar',
+                data: {
+                    labels: <?php echo $proy_labels; ?>,
+                    datasets: [
+                        {
+                            label: 'Ingresos',
+                            data: <?php echo $proy_ing; ?>,
+                            backgroundColor: 'rgba(40,167,69,0.75)',
+                            borderColor: 'rgba(40,167,69,1)',
+                            borderWidth: 1, borderRadius: 4
+                        },
+                        {
+                            label: 'Egresos',
+                            data: <?php echo $proy_egr; ?>,
+                            backgroundColor: 'rgba(220,53,69,0.75)',
+                            borderColor: 'rgba(220,53,69,1)',
+                            borderWidth: 1, borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ' $' + ctx.parsed.y.toLocaleString('es-EC', {minimumFractionDigits: 2})
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { font: { size: 10 } } },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: v => '$' + v.toLocaleString('es-EC') }
+                        }
+                    }
+                }
+            });
+        })();
+        <?php endif; ?>
+
         const ctx = document.getElementById('mainChart').getContext('2d');
 
         const labelsData   = <?php echo $json_labels; ?>;
@@ -700,6 +846,120 @@ $res_gastos = $stmt_res->get_result();
             });
         });
     </script>
+
+<!-- Modal: Detalle por Proyecto -->
+<div class="modal fade" id="modalDetalleProy" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header text-white py-2" style="background:#2c3e50;">
+        <h6 class="modal-title mb-0"><i class="bi bi-kanban me-2"></i><span id="proy_titulo">Proyecto</span></h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-2">
+        <div id="proy_loading" class="text-center py-4">
+          <div class="spinner-border" style="color:#2c3e50;" role="status"></div>
+          <p class="mt-2 small text-muted">Cargando movimientos...</p>
+        </div>
+        <div id="proy_contenido" class="d-none">
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered table-hover mb-0" style="font-size:0.78rem;">
+              <thead class="text-center" style="background:#2c3e50;color:#fff;">
+                <tr>
+                  <th>#</th><th>FECHA</th><th>BENEFICIARIO</th><th>DESCRIPCIÓN</th>
+                  <th>DOC.</th><th>INF. FIN.</th>
+                  <th class="text-success">INGRESO</th>
+                  <th class="text-danger">EGRESO</th>
+                  <th>ESTADO</th><th>USUARIO</th>
+                </tr>
+              </thead>
+              <tbody id="proy_tbody"></tbody>
+              <tfoot style="background:#ecf0f1;" class="fw-bold">
+                <tr>
+                  <td colspan="6" class="text-end">TOTAL ACTIVOS:</td>
+                  <td class="text-end text-success" id="proy_total_ing"></td>
+                  <td class="text-end text-danger" id="proy_total_egr"></td>
+                  <td colspan="2" class="text-end" id="proy_saldo"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p id="proy_vacio" class="text-center text-muted small py-3 d-none">No hay movimientos para este período.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function verDetalleProy(idProy, nombre) {
+    document.getElementById('proy_titulo').textContent = nombre;
+    document.getElementById('proy_loading').classList.remove('d-none');
+    document.getElementById('proy_contenido').classList.add('d-none');
+    document.getElementById('proy_tbody').innerHTML = '';
+    document.getElementById('proy_vacio').classList.add('d-none');
+
+    new bootstrap.Modal(document.getElementById('modalDetalleProy')).show();
+
+    var params  = new URLSearchParams(window.location.search);
+    var desde   = params.get('desde')      || '<?php echo $fecha_inicio; ?>';
+    var hasta   = params.get('hasta')      || '<?php echo $fecha_fin; ?>';
+    var oficina = params.get('id_oficina') || '<?php echo $id_oficina_consulta; ?>';
+
+    fetch('ajax_detalle_proyecto.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'id_proyecto=' + idProy + '&id_oficina=' + oficina + '&desde=' + desde + '&hasta=' + hasta
+    })
+    .then(r => r.json())
+    .then(function(res) {
+        document.getElementById('proy_loading').classList.add('d-none');
+        document.getElementById('proy_contenido').classList.remove('d-none');
+
+        if (!res.success || res.movimientos.length === 0) {
+            document.getElementById('proy_vacio').classList.remove('d-none');
+            document.getElementById('proy_total_ing').textContent = '$0.00';
+            document.getElementById('proy_total_egr').textContent = '$0.00';
+            document.getElementById('proy_saldo').textContent = 'Saldo: $0.00';
+            return;
+        }
+
+        var html = '';
+        res.movimientos.forEach(function(m) {
+            var anulado = m.ESTADO === 'I';
+            var badge = anulado ? '<span class="badge bg-danger">Anulado</span>' : '<span class="badge bg-success">Activo</span>';
+            var style = anulado ? 'opacity:0.5;text-decoration:line-through;' : '';
+            var ing = parseFloat(m.importe_recibido);
+            var egr = parseFloat(m.importe_entregado);
+            html += '<tr style="' + style + '">'
+                + '<td class="text-center">' + m.id + '</td>'
+                + '<td class="text-center">' + m.fecha + '</td>'
+                + '<td>' + (m.intermediario || '-') + '</td>'
+                + '<td>' + (m.concepto || '-') + '</td>'
+                + '<td class="text-center">' + (m.doc_soporte || '-') + '</td>'
+                + '<td class="text-center">' + (m.inf_fin || '-') + '</td>'
+                + '<td class="text-end text-success">' + (ing > 0 ? '$' + ing.toFixed(2) : '-') + '</td>'
+                + '<td class="text-end text-danger">'  + (egr > 0 ? '$' + egr.toFixed(2) : '-') + '</td>'
+                + '<td class="text-center">' + badge + '</td>'
+                + '<td class="text-center">' + (m.nombre_usuario || '-') + '</td>'
+                + '</tr>';
+        });
+
+        document.getElementById('proy_tbody').innerHTML = html;
+        document.getElementById('proy_total_ing').textContent = '$' + parseFloat(res.total_ing).toFixed(2);
+        document.getElementById('proy_total_egr').textContent = '$' + parseFloat(res.total_egr).toFixed(2);
+        var saldo = parseFloat(res.saldo);
+        var el = document.getElementById('proy_saldo');
+        el.textContent = 'Saldo: $' + saldo.toFixed(2);
+        el.className = 'text-end ' + (saldo >= 0 ? 'text-success' : 'text-danger');
+    })
+    .catch(function() {
+        document.getElementById('proy_loading').classList.add('d-none');
+        document.getElementById('proy_contenido').classList.remove('d-none');
+        document.getElementById('proy_tbody').innerHTML =
+            '<tr><td colspan="10" class="text-center text-danger">Error al cargar datos.</td></tr>';
+    });
+}
+</script>
 
 <!-- Modal: Detalle Ingresos por Inf. Financiera -->
 <div class="modal fade" id="modalDetalleIngreso" tabindex="-1" aria-hidden="true">
