@@ -611,6 +611,7 @@ $proy_egr    = json_encode(array_map(fn($p) => round($p['total_egr'], 2), $proye
         </div>
     </div>
 </div>
+<script>
         <?php if (!empty($proyectos_data)): ?>
         (function() {
             var ctxP = document.getElementById('chartProyectos').getContext('2d');
