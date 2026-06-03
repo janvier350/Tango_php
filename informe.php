@@ -134,7 +134,6 @@ $tot_sal_global = $tot_ing_global - $tot_egr_global;
 
     <!-- ── Filtros ── -->
     <form method="GET" class="row g-2 mb-3 align-items-end no-print p-3 bg-white rounded shadow-sm">
-        <?php if ($user_rol == 1): ?>
         <div class="col-auto">
             <label class="form-label small mb-1 fw-semibold">Oficina</label>
             <select name="id_oficina" class="form-select form-select-sm">
@@ -146,7 +145,6 @@ $tot_sal_global = $tot_ing_global - $tot_egr_global;
                 <?php endforeach; ?>
             </select>
         </div>
-        <?php endif; ?>
         <div class="col-auto">
             <label class="form-label small mb-1 fw-semibold">Desde</label>
             <input type="date" name="desde" class="form-control form-control-sm"
