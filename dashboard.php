@@ -445,6 +445,66 @@ $res_gastos = $stmt_res->get_result();
             </div>
         </div>
     </div>
+
+    <!-- Resumen de Ingresos -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-success text-white fw-bold">
+                <i class="bi bi-graph-up-arrow me-2"></i> Resumen de Ingresos (INF. FIN.)
+            </div>
+            <div class="card-body p-0">
+                <?php
+                $sql_ingresos = "SELECT
+                                    r.ID_REPOSICION,
+                                    r.REPOSICION AS nombre_ingreso,
+                                    SUM(m.importe_recibido) AS total_ingreso
+                                FROM movimientos m
+                                INNER JOIN CAT_REPOSICION r ON m.inf_fin = r.ID_REPOSICION
+                                WHERE m.id_oficina = ? AND m.importe_recibido > 0
+                                  AND m.ESTADO = 'A'
+                                  AND m.fecha BETWEEN ? AND ?
+                                GROUP BY r.ID_REPOSICION, r.REPOSICION
+                                ORDER BY total_ingreso DESC";
+
+                $stmt_ing = $conn->prepare($sql_ingresos);
+                $stmt_ing->bind_param("iss", $id_oficina_actual, $fecha_inicio, $fecha_fin);
+                $stmt_ing->execute();
+                $res_ingresos = $stmt_ing->get_result();
+                ?>
+                <ul class="list-group list-group-flush">
+                    <?php
+                    $gran_total_ing = 0;
+                    if ($res_ingresos->num_rows > 0):
+                        while ($ingreso = $res_ingresos->fetch_assoc()):
+                            $gran_total_ing += $ingreso['total_ingreso'];
+                    ?>
+                        <li class="list-group-item d-flex justify-content-between align-items-center small px-2 py-1">
+                            <span class="me-1"><?php echo htmlspecialchars($ingreso['nombre_ingreso']); ?></span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold text-success">$<?php echo number_format($ingreso['total_ingreso'], 2); ?></span>
+                                <button class="btn btn-outline-success btn-sm py-0 px-1 lh-1" style="font-size:0.7rem;"
+                                    onclick="verDetalleIngreso(<?php echo $ingreso['ID_REPOSICION']; ?>, '<?php echo htmlspecialchars(addslashes($ingreso['nombre_ingreso'])); ?>')"
+                                    title="Ver movimientos">
+                                    <i class="bi bi-list-ul"></i>
+                                </button>
+                            </div>
+                        </li>
+                    <?php
+                        endwhile;
+                    else:
+                    ?>
+                        <li class="list-group-item text-center text-muted small">No hay ingresos registrados</li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+            <div class="card-footer bg-light d-flex justify-content-between">
+                <span class="fw-bold">TOTAL INGRESOS:</span>
+                <span class="fw-bold text-success" style="font-size: 1.1rem;">
+                    $<?php echo number_format($gran_total_ing, 2); ?>
+                </span>
+            </div>
+        </div>
+    </div>
 </div>
         </div>
         
@@ -640,6 +700,117 @@ $res_gastos = $stmt_res->get_result();
             });
         });
     </script>
+
+<!-- Modal: Detalle Ingresos por Inf. Financiera -->
+<div class="modal fade" id="modalDetalleIngreso" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white py-2">
+        <h6 class="modal-title mb-0">
+          <i class="bi bi-list-ul me-2"></i>
+          <span id="ing_titulo">Detalle</span>
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-2">
+        <div id="ing_loading" class="text-center py-4">
+          <div class="spinner-border text-success" role="status"></div>
+          <p class="mt-2 small text-muted">Cargando movimientos...</p>
+        </div>
+        <div id="ing_contenido" class="d-none">
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered table-hover mb-0" style="font-size:0.78rem;">
+              <thead class="table-success text-center">
+                <tr>
+                  <th>#</th>
+                  <th>FECHA</th>
+                  <th>BENEFICIARIO</th>
+                  <th>DESCRIPCIÓN</th>
+                  <th>DOC. SOPORTE</th>
+                  <th class="text-end">MONTO</th>
+                  <th>ESTADO</th>
+                  <th>USUARIO</th>
+                </tr>
+              </thead>
+              <tbody id="ing_tbody"></tbody>
+              <tfoot class="table-light">
+                <tr>
+                  <td colspan="5" class="text-end fw-bold">TOTAL INGRESOS:</td>
+                  <td class="text-end fw-bold text-success" id="ing_total"></td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p id="ing_vacio" class="text-center text-muted small py-3 d-none">No hay movimientos para este período.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function verDetalleIngreso(idReposicion, nombre) {
+    document.getElementById('ing_titulo').textContent = nombre;
+    document.getElementById('ing_loading').classList.remove('d-none');
+    document.getElementById('ing_contenido').classList.add('d-none');
+    document.getElementById('ing_tbody').innerHTML = '';
+    document.getElementById('ing_vacio').classList.add('d-none');
+
+    var modal = new bootstrap.Modal(document.getElementById('modalDetalleIngreso'));
+    modal.show();
+
+    var params  = new URLSearchParams(window.location.search);
+    var desde   = params.get('desde')      || '<?php echo $fecha_inicio; ?>';
+    var hasta   = params.get('hasta')      || '<?php echo $fecha_fin; ?>';
+    var oficina = params.get('id_oficina') || '<?php echo $id_oficina_consulta; ?>';
+
+    fetch('ajax_detalle_ingreso.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'id_reposicion=' + idReposicion + '&id_oficina=' + oficina + '&desde=' + desde + '&hasta=' + hasta
+    })
+    .then(r => r.json())
+    .then(function(res) {
+        document.getElementById('ing_loading').classList.add('d-none');
+        document.getElementById('ing_contenido').classList.remove('d-none');
+
+        if (!res.success || res.movimientos.length === 0) {
+            document.getElementById('ing_vacio').classList.remove('d-none');
+            document.getElementById('ing_total').textContent = '$0.00';
+            return;
+        }
+
+        var html = '';
+        res.movimientos.forEach(function(m) {
+            var anulado = m.ESTADO === 'I';
+            var badge = anulado
+                ? '<span class="badge bg-danger">Anulado</span>'
+                : '<span class="badge bg-success">Activo</span>';
+            var rowStyle = anulado ? 'opacity:0.5;text-decoration:line-through;' : '';
+            html += '<tr style="' + rowStyle + '">'
+                + '<td class="text-center">' + m.id + '</td>'
+                + '<td class="text-center">' + m.fecha + '</td>'
+                + '<td>' + (m.intermediario || '-') + '</td>'
+                + '<td>' + (m.concepto || '-') + '</td>'
+                + '<td class="text-center">' + (m.doc_soporte || '-') + '</td>'
+                + '<td class="text-end fw-bold text-success">$' + parseFloat(m.importe_recibido).toFixed(2) + '</td>'
+                + '<td class="text-center">' + badge + '</td>'
+                + '<td class="text-center">' + (m.nombre_usuario || '-') + '</td>'
+                + '</tr>';
+        });
+
+        document.getElementById('ing_tbody').innerHTML = html;
+        document.getElementById('ing_total').textContent = '$' + parseFloat(res.total).toFixed(2);
+    })
+    .catch(function() {
+        document.getElementById('ing_loading').classList.add('d-none');
+        document.getElementById('ing_contenido').classList.remove('d-none');
+        document.getElementById('ing_tbody').innerHTML =
+            '<tr><td colspan="8" class="text-center text-danger">Error al cargar datos.</td></tr>';
+    });
+}
+</script>
 
 <!-- Modal: Detalle Inf. Financiera -->
 <div class="modal fade" id="modalDetalleInfFin" tabindex="-1" aria-hidden="true">
