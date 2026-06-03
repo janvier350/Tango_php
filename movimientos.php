@@ -12,9 +12,22 @@ $conn->set_charset("utf8");
 $conn->set_charset("utf8");
  
  
-// 1. L��gica de Inserci��n
+// 1. Lógica de Inserción
+$error_doc = '';
 if (isset($_POST['reg_mov'])) {
-    // Calculamos el periodo autom��ticamente
+    // Validación server-side: documento duplicado (global, incluye anulados)
+    $doc_post = trim($_POST['doc'] ?? '');
+    if ($doc_post !== '') {
+        $chk = $conn->prepare("SELECT id FROM movimientos WHERE doc_soporte = ?");
+        $chk->bind_param("s", $doc_post);
+        $chk->execute();
+        if ($chk->get_result()->num_rows > 0) {
+            $error_doc = "El documento \"" . htmlspecialchars($doc_post) . "\" ya está registrado en el sistema.";
+        }
+    }
+
+if ($error_doc === '') {
+    // Calculamos el periodo automáticamente
     $periodo = date("Y-n", strtotime($_POST['f']));
     
     // Separamos el monto en Recibido o Entregado seg��n la selecci��n
@@ -62,12 +75,12 @@ if (isset($_POST['reg_mov'])) {
     
     if ($stmt->execute()) {
         $stmt->close();
-        // REDIRECCI�0�7N CR�0�1TICA: Debe coincidir exactamente con el nombre de tu archivo
         header("Location: movimientos.php");
         exit();
     } else {
         echo "Error al insertar: " . $stmt->error;
     }
+} // fin if $error_doc === ''
 }
 
 // Variables de sesión disponibles globalmente
@@ -95,6 +108,20 @@ $f_texto  = $_GET['f_texto']  ?? '';
         .filtros-card { background: #f8f9fa; border-left: 4px solid #0d6efd; }
         tfoot input { width: 100%; font-size: 0.7rem; padding: 2px 4px; border: 1px solid #ced4da; border-radius: 3px; }
         .dataTables_wrapper .dataTables_filter { display: none; }
+
+        /* Dictado por voz */
+        .btn-mic { transition: all .2s; }
+        .btn-mic.escuchando {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            color: #fff;
+            animation: mic-pulse 1.2s infinite;
+        }
+        @keyframes mic-pulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(220,53,69,.5); }
+            50%      { box-shadow: 0 0 0 5px rgba(220,53,69,0); }
+        }
+        .mic-interim { min-height: 1rem; }
     </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -122,6 +149,12 @@ $f_texto  = $_GET['f_texto']  ?? '';
         
         <div class="card mb-12 border-0 shadow-sm">
             <div class="card-body">
+                <?php if ($error_doc): ?>
+                <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><?php echo $error_doc; ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <?php endif; ?>
                 <form method="POST" action="movimientos.php" class="row g-2">
                     <div class="col-md-2">
                         <label class="small fw-bold">Fecha</label>
@@ -187,8 +220,20 @@ $f_texto  = $_GET['f_texto']  ?? '';
                     </div>
 
                     <div class="col-md-6">
-                        <label class="small fw-bold">Descripcion</label>
-                        <input type="text" name="c" class="form-control form-control-sm" placeholder="Detalle" required>
+                        <label class="small fw-bold d-flex align-items-center gap-1">Descripcion
+                            <span id="mic_status_c" class="text-danger small d-none fw-normal">
+                                <i class="bi bi-record-circle-fill"></i> Escuchando...
+                            </span>
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="c" id="campo_concepto" class="form-control form-control-sm" placeholder="Detalle" required>
+                            <button type="button" class="btn btn-outline-secondary btn-mic" id="mic_btn_c"
+                                    onclick="toggleDictado('campo_concepto','mic_btn_c','mic_status_c','interim_c')"
+                                    title="Dictado por voz">
+                                <i class="bi bi-mic"></i>
+                            </button>
+                        </div>
+                        <div id="interim_c" class="mic-interim text-muted fst-italic small"></div>
                     </div>
                     
                     <div class="col-md-2">
@@ -210,8 +255,23 @@ $f_texto  = $_GET['f_texto']  ?? '';
                     </div>
                 -->
                     <div class="col-md-3">
-                        <label class="small fw-bold">Doc. Soporte</label>
-                        <input type="text" name="doc" class="form-control form-control-sm" placeholder =" # factura ...">
+                        <label class="small fw-bold d-flex align-items-center gap-1">Doc. Soporte
+                            <span id="mic_status_doc" class="text-danger small d-none fw-normal">
+                                <i class="bi bi-record-circle-fill"></i> Escuchando...
+                            </span>
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="doc" id="doc_soporte" class="form-control form-control-sm <?php echo $error_doc ? 'is-invalid' : ''; ?>"
+                                   placeholder="# factura ..." autocomplete="off"
+                                   value="<?php echo $error_doc ? htmlspecialchars($_POST['doc'] ?? '') : ''; ?>">
+                            <button type="button" class="btn btn-outline-secondary btn-mic" id="mic_btn_doc"
+                                    onclick="toggleDictado('doc_soporte','mic_btn_doc','mic_status_doc','interim_doc')"
+                                    title="Dictado por voz">
+                                <i class="bi bi-mic"></i>
+                            </button>
+                        </div>
+                        <div id="interim_doc" class="mic-interim text-muted fst-italic small"></div>
+                        <div id="doc_feedback" class="form-text" style="font-size:0.7rem;"></div>
                     </div>
 
                   
@@ -244,7 +304,13 @@ $f_texto  = $_GET['f_texto']  ?? '';
                     
 
                     <div class="col-md-2">
-                        <label class="small fw-bold">Banco</label>
+                        <label class="small fw-bold d-flex align-items-center gap-1">Banco
+                            <button type="button" class="btn btn-success btn-sm py-0 px-1 lh-1" style="font-size:0.75rem;"
+                                data-bs-toggle="modal" data-bs-target="#modalNuevoBanco"
+                                title="Agregar nuevo banco">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </label>
                         <select name="ban" class="form-select form-select-sm">
                             <option value="EFECTIVO">Efectivo</option>
                             <?php $res = $conn->query("SELECT nombre FROM cat_bancos"); while($ba = $res->fetch_assoc()) echo "<option>{$ba['nombre']}</option>"; ?>
@@ -491,6 +557,32 @@ $f_texto  = $_GET['f_texto']  ?? '';
   </div>
 </div>
 
+<!-- Modal: Nuevo Banco -->
+<div class="modal fade" id="modalNuevoBanco" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2 bg-dark text-white">
+        <h6 class="modal-title mb-0"><i class="bi bi-bank me-2"></i>Nuevo Banco</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label small fw-bold">Nombre del Banco</label>
+          <input type="text" id="nb2_nombre" class="form-control form-control-sm text-uppercase"
+                 placeholder="Ej: BANCO PICHINCHA..." autocomplete="off">
+          <div id="nb2_feedback" class="form-text mt-1"></div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="nb2_guardar" class="btn btn-dark btn-sm">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Nueva Inf. Financiera -->
 <div class="modal fade" id="modalNuevaInfFin" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
@@ -607,6 +699,99 @@ $f_texto  = $_GET['f_texto']  ?? '';
   </div>
 </div>
 
+<!-- Dictado por voz -->
+<script>
+var micRecognition  = null;
+var micActivo       = false;
+var micCampoActual  = null;
+var micBtnActual    = null;
+var micStatusActual = null;
+var micInterimActual= null;
+var micLang         = 'es-EC';
+
+function toggleDictado(campoId, btnId, statusId, interimId) {
+    if (micActivo && micCampoActual === campoId) {
+        detenerDictado();
+        return;
+    }
+    if (micActivo) detenerDictado(); // detener el anterior si hay uno activo
+    iniciarDictado(campoId, btnId, statusId, interimId);
+}
+
+function iniciarDictado(campoId, btnId, statusId, interimId) {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+        alert('El dictado por voz requiere Google Chrome o Microsoft Edge.');
+        return;
+    }
+
+    micCampoActual   = campoId;
+    micBtnActual     = btnId;
+    micStatusActual  = statusId;
+    micInterimActual = interimId;
+
+    micRecognition = new SR();
+    micRecognition.lang           = micLang;
+    micRecognition.continuous     = true;
+    micRecognition.interimResults = true;
+
+    micRecognition.onresult = function(event) {
+        var interim = '', finalText = '';
+        for (var i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) finalText += event.results[i][0].transcript + ' ';
+            else interim += event.results[i][0].transcript;
+        }
+        document.getElementById(interimId).textContent = interim;
+        if (finalText) {
+            var campo = document.getElementById(campoId);
+            campo.value += finalText;
+            campo.dispatchEvent(new Event('input')); // dispara validaciones existentes
+            document.getElementById(interimId).textContent = '';
+        }
+    };
+
+    micRecognition.onerror = function(e) {
+        if (e.error === 'no-speech') return;
+        detenerDictado();
+        if (e.error === 'not-allowed') alert('Permiso de micrófono denegado. Habilítalo en la barra del navegador.');
+    };
+
+    micRecognition.onend = function() {
+        if (micActivo) micRecognition.start(); // auto-reinicio por timeout
+    };
+
+    micRecognition.start();
+    micActivo = true;
+
+    var btn = document.getElementById(btnId);
+    btn.classList.add('escuchando');
+    btn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+    btn.title = 'Detener dictado';
+    document.getElementById(statusId).classList.remove('d-none');
+}
+
+function detenerDictado() {
+    micActivo = false;
+    if (micRecognition) { micRecognition.stop(); micRecognition = null; }
+
+    if (micBtnActual) {
+        var btn = document.getElementById(micBtnActual);
+        if (btn) {
+            btn.classList.remove('escuchando');
+            btn.innerHTML = '<i class="bi bi-mic"></i>';
+            btn.title = 'Dictado por voz';
+        }
+    }
+    if (micStatusActual)  document.getElementById(micStatusActual)?.classList.add('d-none');
+    if (micInterimActual) document.getElementById(micInterimActual).textContent = '';
+
+    micCampoActual = micBtnActual = micStatusActual = micInterimActual = null;
+}
+
+// Detener dictado si el usuario envía el formulario
+document.querySelector('form[action="movimientos.php"]')?.addEventListener('submit', detenerDictado);
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
@@ -628,6 +813,103 @@ $(document).ready(function() {
             { orderable: false, targets: [8, 18, 19] }
         ],
         order: []
+    });
+
+    // --- Validación Doc. Soporte en tiempo real ---
+    var checkTimerDoc;
+    $('#doc_soporte').on('input', function() {
+        var val = $(this).val().trim();
+        clearTimeout(checkTimerDoc);
+        $(this).removeClass('is-valid is-invalid');
+        $('#doc_feedback').text('').removeClass('text-success text-danger');
+        if (val.length < 2) return;
+        checkTimerDoc = setTimeout(function() {
+            $.post('ajax_doc_soporte.php', { action: 'check', doc: val }, function(res) {
+                if (res.exists) {
+                    $('#doc_soporte').addClass('is-invalid');
+                    var detalle = '';
+                    if (res.fecha)    detalle += ' · Fecha: ' + res.fecha;
+                    if (res.usuario)  detalle += ' · Usuario: ' + res.usuario;
+                    if (res.oficina)  detalle += ' · Oficina: ' + res.oficina;
+                    $('#doc_feedback')
+                        .html('<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Documento ya registrado.' + detalle + '</span>');
+                } else {
+                    $('#doc_soporte').addClass('is-valid');
+                    $('#doc_feedback').html('<span class="text-success"><i class="bi bi-check-circle me-1"></i>Disponible.</span>');
+                }
+            }, 'json');
+        }, 500);
+    });
+
+    // Bloquear submit si el doc está marcado como duplicado
+    $('form[action="movimientos.php"]').on('submit', function(e) {
+        if ($('#doc_soporte').hasClass('is-invalid')) {
+            e.preventDefault();
+            $('#doc_soporte').focus();
+            $('#doc_feedback').html('<span class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>Corrige el documento antes de guardar.</span>');
+        }
+    });
+
+    // --- Modal Nuevo Banco ---
+    var checkTimerBanco;
+
+    $('#modalNuevoBanco').on('show.bs.modal', function() {
+        $('#nb2_nombre').val('').removeClass('is-valid is-invalid');
+        $('#nb2_feedback').text('').removeClass('text-success text-danger');
+        $('#nb2_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+    });
+    $('#modalNuevoBanco').on('shown.bs.modal', function() { $('#nb2_nombre').focus(); });
+
+    $('#nb2_nombre').on('input', function() {
+        var val = $(this).val().trim();
+        clearTimeout(checkTimerBanco);
+        $(this).removeClass('is-valid is-invalid');
+        $('#nb2_feedback').text('').removeClass('text-success text-danger');
+        if (val.length < 2) return;
+        checkTimerBanco = setTimeout(function() {
+            $.post('ajax_banco.php', { action: 'check', nombre: val }, function(res) {
+                if (res.exists) {
+                    $('#nb2_nombre').addClass('is-invalid');
+                    $('#nb2_feedback').text('⚠ Ya existe un banco con ese nombre.').addClass('text-danger');
+                } else {
+                    $('#nb2_nombre').addClass('is-valid');
+                    $('#nb2_feedback').text('✓ Disponible.').addClass('text-success');
+                }
+            }, 'json');
+        }, 500);
+    });
+
+    $('#nb2_guardar').on('click', function() {
+        var nombre = $('#nb2_nombre').val().trim();
+        if (nombre.length < 2) {
+            $('#nb2_nombre').addClass('is-invalid');
+            $('#nb2_feedback').text('Ingresa el nombre del banco.').addClass('text-danger');
+            return;
+        }
+        if ($('#nb2_nombre').hasClass('is-invalid')) return;
+
+        $('#nb2_guardar').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+        $.post('ajax_banco.php', { action: 'crear', nombre: nombre }, function(res) {
+            if (res.success) {
+                // Agregar como <option> al select de bancos y seleccionarlo
+                $('select[name="ban"]').append('<option value="'+res.nombre+'" selected>'+res.nombre+'</option>');
+                $('select[name="ban"]').val(res.nombre);
+
+                bootstrap.Modal.getInstance(document.getElementById('modalNuevoBanco')).hide();
+
+                var toast = $('<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999"><div class="toast show align-items-center text-bg-dark border-0"><div class="d-flex"><div class="toast-body"><i class="bi bi-check-circle me-2"></i>Banco creado y seleccionado.</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div></div>');
+                $('body').append(toast);
+                setTimeout(function() { toast.remove(); }, 3000);
+            } else {
+                $('#nb2_nombre').addClass('is-invalid');
+                $('#nb2_feedback').text(res.msg).addClass('text-danger');
+                $('#nb2_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+            }
+        }, 'json').fail(function() {
+            $('#nb2_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+            alert('Error de conexión. Intenta nuevamente.');
+        });
     });
 
     // --- Modal Nueva Inf. Financiera ---
