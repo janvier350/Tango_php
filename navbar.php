@@ -38,6 +38,9 @@
         <a class="nav-link px-3" href="cambiar_clave.php">
             <i class="bi bi-key me-1"></i> Cambiar Contraseña
         </a>
+        <a class="nav-link px-3" href="informe.php">
+            <i class="bi bi-file-earmark-bar-graph me-1"></i> Informe
+        </a>
         <a class="nav-link text-danger fw-bold ms-lg-3 px-3" href="?logout=1">
             <i class="bi bi-box-arrow-right me-1"></i> Salir
         </a>
