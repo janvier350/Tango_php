@@ -23,7 +23,7 @@ if (isset($_POST['registrar_user'])) {
         $mensaje  = 'Todos los campos son obligatorios.';
         $tipo_msg = 'danger';
     } else {
-        // Verificar que el login no exista
+        // Verificar usuario duplicado
         $chk = $conn->prepare("SELECT id FROM usuarios WHERE usuario = ?");
         $chk->bind_param("s", $usuario);
         $chk->execute();
@@ -34,13 +34,22 @@ if (isset($_POST['registrar_user'])) {
             $tipo_msg = 'warning';
         } else {
             $hash = password_hash($clave, PASSWORD_BCRYPT);
+
+            // Intentar con columna 'nombres', si falla intentar sin ella
             $stmt = $conn->prepare("INSERT INTO usuarios (nombre_completo, nombres, usuario, clave, ID_ROL, ID_CTR_OFICINA) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssssii", $nombre, $nombre, $usuario, $hash, $id_rol, $id_ofic);
-            if ($stmt->execute()) {
+            if ($stmt) {
+                $stmt->bind_param("ssssii", $nombre, $nombre, $usuario, $hash, $id_rol, $id_ofic);
+            } else {
+                // Fallback sin columna 'nombres'
+                $stmt = $conn->prepare("INSERT INTO usuarios (nombre_completo, usuario, clave, ID_ROL, ID_CTR_OFICINA) VALUES (?, ?, ?, ?, ?)");
+                if ($stmt) $stmt->bind_param("sssii", $nombre, $usuario, $hash, $id_rol, $id_ofic);
+            }
+
+            if ($stmt && $stmt->execute()) {
                 $mensaje  = "Usuario <strong>$usuario</strong> creado correctamente.";
                 $tipo_msg = 'success';
             } else {
-                $mensaje  = 'Error al crear el usuario: ' . htmlspecialchars($conn->error);
+                $mensaje  = 'Error al crear el usuario: <code>' . htmlspecialchars($conn->error ?: ($stmt ? $stmt->error : 'prepare() falló')) . '</code>';
                 $tipo_msg = 'danger';
             }
         }
@@ -67,6 +76,7 @@ $roles = $res_roles ? $res_roles->fetch_all(MYSQLI_ASSOC) : [];
 $res_ofics = $conn->query("SELECT ID_OFICINA, OFICINA FROM CTR_OFICINA ORDER BY OFICINA");
 $ofics = $res_ofics ? $res_ofics->fetch_all(MYSQLI_ASSOC) : [];
 
+// Query con JOINs para mostrar rol y oficina; fallback simple si falla
 $res_ulist = $conn->query("
     SELECT u.id, u.nombre_completo, u.usuario,
            COALESCE(r.ROL, 'Sin rol')        AS rol,
@@ -76,7 +86,15 @@ $res_ulist = $conn->query("
     LEFT JOIN CTR_OFICINA o ON u.ID_CTR_OFICINA = o.ID_OFICINA
     ORDER BY u.nombre_completo
 ");
-$usuarios = $res_ulist ? $res_ulist->fetch_all(MYSQLI_ASSOC) : [];
+if ($res_ulist) {
+    $usuarios = $res_ulist->fetch_all(MYSQLI_ASSOC);
+} else {
+    // Fallback: query sin JOINs
+    $res_simple = $conn->query("SELECT id, nombre_completo, usuario, '' AS rol, '' AS oficina FROM usuarios ORDER BY nombre_completo");
+    $usuarios = $res_simple ? $res_simple->fetch_all(MYSQLI_ASSOC) : [];
+    $mensaje  = ($mensaje ?: '') . ' [Aviso BD: ' . htmlspecialchars($conn->error) . ']';
+    $tipo_msg = $tipo_msg ?: 'warning';
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
