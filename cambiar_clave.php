@@ -137,7 +137,7 @@ if (isset($_POST['cambiar_clave_admin']) && $_SESSION['user_rol'] == 1) {
 
             <!-- Panel admin: cambiar clave de cualquier usuario -->
             <?php if ($_SESSION['user_rol'] == 1):
-                $usuarios = $conn->query("SELECT id, nombre_completo, usuario FROM usuarios ORDER BY nombre_completo");
+                $usuarios = $conn->query("SELECT id, nombres, usuario FROM usuarios ORDER BY nombres");
             ?>
             <div class="col-md-5">
                 <div class="card shadow-sm border-warning">
@@ -154,7 +154,7 @@ if (isset($_POST['cambiar_clave_admin']) && $_SESSION['user_rol'] == 1) {
                                     <?php while ($u = $usuarios->fetch_assoc()): ?>
                                     <option value="<?php echo $u['id']; ?>"
                                         <?php if ($u['id'] == $_SESSION['user_id']) echo 'disabled'; ?>>
-                                        <?php echo htmlspecialchars($u['nombre_completo']); ?>
+                                        <?php echo htmlspecialchars($u['nombres']); ?>
                                         (<?php echo htmlspecialchars($u['usuario']); ?>)
                                     </option>
                                     <?php endwhile; ?>

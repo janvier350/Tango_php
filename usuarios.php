@@ -36,14 +36,8 @@ if (isset($_POST['registrar_user'])) {
             $hash = password_hash($clave, PASSWORD_BCRYPT);
 
             // Intentar con columna 'nombres', si falla intentar sin ella
-            $stmt = $conn->prepare("INSERT INTO usuarios (nombre_completo, nombres, usuario, clave, ID_ROL, ID_CTR_OFICINA) VALUES (?, ?, ?, ?, ?, ?)");
-            if ($stmt) {
-                $stmt->bind_param("ssssii", $nombre, $nombre, $usuario, $hash, $id_rol, $id_ofic);
-            } else {
-                // Fallback sin columna 'nombres'
-                $stmt = $conn->prepare("INSERT INTO usuarios (nombre_completo, usuario, clave, ID_ROL, ID_CTR_OFICINA) VALUES (?, ?, ?, ?, ?)");
-                if ($stmt) $stmt->bind_param("sssii", $nombre, $usuario, $hash, $id_rol, $id_ofic);
-            }
+            $stmt = $conn->prepare("INSERT INTO usuarios (nombres, usuario, clave, ID_ROL, ID_CTR_OFICINA) VALUES (?, ?, ?, ?, ?)");
+            if ($stmt) $stmt->bind_param("sssii", $nombre, $usuario, $hash, $id_rol, $id_ofic);
 
             if ($stmt && $stmt->execute()) {
                 $mensaje  = "Usuario <strong>$usuario</strong> creado correctamente.";
@@ -78,19 +72,19 @@ $ofics = $res_ofics ? $res_ofics->fetch_all(MYSQLI_ASSOC) : [];
 
 // Query con JOINs para mostrar rol y oficina; fallback simple si falla
 $res_ulist = $conn->query("
-    SELECT u.id, u.nombre_completo, u.usuario,
+    SELECT u.id, u.nombres, u.usuario,
            COALESCE(r.ROL, 'Sin rol')        AS rol,
            COALESCE(o.OFICINA, 'Sin oficina') AS oficina
     FROM usuarios u
     LEFT JOIN CTR_ROL r     ON u.ID_ROL = r.ID_ROL
     LEFT JOIN CTR_OFICINA o ON u.ID_CTR_OFICINA = o.ID_OFICINA
-    ORDER BY u.nombre_completo
+    ORDER BY u.nombres
 ");
 if ($res_ulist) {
     $usuarios = $res_ulist->fetch_all(MYSQLI_ASSOC);
 } else {
     // Fallback: query sin JOINs
-    $res_simple = $conn->query("SELECT id, nombre_completo, usuario, '' AS rol, '' AS oficina FROM usuarios ORDER BY nombre_completo");
+    $res_simple = $conn->query("SELECT id, nombres, usuario, '' AS rol, '' AS oficina FROM usuarios ORDER BY nombres");
     $usuarios = $res_simple ? $res_simple->fetch_all(MYSQLI_ASSOC) : [];
     $mensaje  = ($mensaje ?: '') . ' [Aviso BD: ' . htmlspecialchars($conn->error) . ']';
     $tipo_msg = $tipo_msg ?: 'warning';
@@ -207,7 +201,7 @@ if ($res_ulist) {
                     <tbody>
                         <?php foreach ($usuarios as $u): ?>
                         <tr>
-                            <td class="small"><?php echo htmlspecialchars($u['nombre_completo']); ?></td>
+                            <td class="small"><?php echo htmlspecialchars($u['nombres']); ?></td>
                             <td><code class="small"><?php echo htmlspecialchars($u['usuario']); ?></code></td>
                             <td>
                                 <span class="badge bg-secondary small">
