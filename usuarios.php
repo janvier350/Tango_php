@@ -50,8 +50,7 @@ if (isset($_POST['registrar_user'])) {
 // ── Borrar usuario ───────────────────────────────────────────────────
 if (isset($_GET['borrar'])) {
     $id = intval($_GET['borrar']);
-    if ($id !== (int)$_SESSION['user_id']) {
-        $conn->prepare("DELETE FROM usuarios WHERE id = ?")->execute() ?: null;
+    if ($id > 0 && $id !== (int)$_SESSION['user_id']) {
         $del = $conn->prepare("DELETE FROM usuarios WHERE id = ?");
         $del->bind_param("i", $id);
         $del->execute();
@@ -60,17 +59,24 @@ if (isset($_GET['borrar'])) {
 }
 
 // ── Catálogos ────────────────────────────────────────────────────────
-$roles   = $conn->query("SELECT ID_ROL, ROL FROM CTR_ROL ORDER BY ID_ROL")->fetch_all(MYSQLI_ASSOC);
-$ofics   = $conn->query("SELECT ID_OFICINA, OFICINA FROM CTR_OFICINA ORDER BY OFICINA")->fetch_all(MYSQLI_ASSOC);
-$usuarios = $conn->query("
+$conn->set_charset("utf8");
+
+$res_roles = $conn->query("SELECT ID_ROL, ROL FROM CTR_ROL ORDER BY ID_ROL");
+$roles = $res_roles ? $res_roles->fetch_all(MYSQLI_ASSOC) : [];
+
+$res_ofics = $conn->query("SELECT ID_OFICINA, OFICINA FROM CTR_OFICINA ORDER BY OFICINA");
+$ofics = $res_ofics ? $res_ofics->fetch_all(MYSQLI_ASSOC) : [];
+
+$res_ulist = $conn->query("
     SELECT u.id, u.nombre_completo, u.usuario,
-           COALESCE(r.ROL, '—')     AS rol,
-           COALESCE(o.OFICINA, '—') AS oficina
+           COALESCE(r.ROL, 'Sin rol')        AS rol,
+           COALESCE(o.OFICINA, 'Sin oficina') AS oficina
     FROM usuarios u
     LEFT JOIN CTR_ROL r     ON u.ID_ROL = r.ID_ROL
     LEFT JOIN CTR_OFICINA o ON u.ID_CTR_OFICINA = o.ID_OFICINA
     ORDER BY u.nombre_completo
-")->fetch_all(MYSQLI_ASSOC);
+");
+$usuarios = $res_ulist ? $res_ulist->fetch_all(MYSQLI_ASSOC) : [];
 ?>
 <!DOCTYPE html>
 <html lang="es">
