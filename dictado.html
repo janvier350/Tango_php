@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: transparent; }
+        #btnDictar {
+            width: 100%; padding: 5px 10px;
+            background: transparent; border: 1px solid #f5365c;
+            color: #f5365c; border-radius: 6px; cursor: pointer;
+            font-size: 12px; transition: all 0.2s;
+        }
+        #btnDictar:hover { background: #fff0f2; }
+        #btnDictar.recording { background: #f5365c; color: white; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    </style>
+</head>
+<body>
+    <button id="btnDictar">&#127908; Dictar</button>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const targetId = params.get('target') || 'soporte';
+        const btn = document.getElementById('btnDictar');
+        let recognition = null;
+        let isRecording = false;
+        btn.onclick = function() {
+            if (isRecording) { recognition && recognition.stop(); return; }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                window.parent.postMessage({ type: 'error', msg: 'Navegador no compatible. Usa Chrome o Edge.' }, '*');
+                return;
+            }
+            recognition = new SpeechRecognition();
+            recognition.lang = 'es-EC';
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            isRecording = true;
+            btn.textContent = '⏹ Detener';
+            btn.classList.add('recording');
+            recognition.onresult = function(event) {
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) transcript += event.results[i][0].transcript;
+                }
+                if (transcript) {
+                    window.parent.postMessage({ type: 'transcript', text: transcript, targetId: targetId }, '*');
+                }
+            };
+            recognition.onend = function() {
+                isRecording = false;
+                btn.textContent = 'Ἲ4 Dictar';
+                btn.classList.remove('recording');
+            };
+            recognition.onerror = function(e) {
+                isRecording = false;
+                btn.textContent = 'Ἲ4 Dictar';
+                btn.classList.remove('recording');
+            };
+            recognition.start();
+        };
+    </script>
+</body>
+</html>
