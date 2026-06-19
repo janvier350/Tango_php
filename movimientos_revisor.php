@@ -357,7 +357,7 @@ $(document).ready(function() {
                     <i class="bi bi-check-all"></i> Aprobado
                 </span>
             <?php elseif ($_SESSION["user_rol"] == 3 || $_SESSION["user_rol"] == 4): ?> 
-                <a href="aprobar_movimiento.php?id=<?php echo $m['id']; ?>" 
+                <a href="aprobar_movimiento.php?id=<?php echo $m['id']; ?>&return=movimientos_revisor.php"
                    class="btn btn-sm btn-outline-success" 
                    onclick="return confirm('¿Confirmar revisión de este movimiento?');">
                     <i class="bi bi-check-circle"></i> Aprobar

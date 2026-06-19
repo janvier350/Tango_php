@@ -139,10 +139,17 @@ $(document).ready(function() {
     <div class="container-fluid px-4 mt-3">
         
         <div class="card mb-12 border-0 shadow-sm">
-            <div class="card-body">
+            <div class="card-body d-flex justify-content-between align-items-start">
+              <div>
               <!-- cabecera formulario -->
                  <h1> caja 401 </h1>
                  <p> validacion de movimientos como CEO </p>
+              </div>
+              <?php if ($_SESSION["user_rol"] == 3 || $_SESSION["user_rol"] == 4): ?>
+              <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaInfFin">
+                  <i class="bi bi-plus-lg me-1"></i>Nueva Inf. Financiera
+              </button>
+              <?php endif; ?>
             </div>
         </div>
         <br>
@@ -229,7 +236,17 @@ $(document).ready(function() {
         <td class="text-center"><?php echo $m['vale_ref']; ?></td>
         <td class="text-center"><?php echo $m['empresa']; ?></td>
         <td class="text-center"><?php echo $m['doc_soporte']; ?></td>
-        <td class="text-center"><?php echo $m['nombre_categoria']; ?> / <?php echo $m['nombre_clasificacion']; ?></td>
+        <?php $puede_editar_if = ($_SESSION["user_rol"] == 3 || $_SESSION["user_rol"] == 4) && !$es_anulado && !($m['ID_USUARIO_REVISA'] > 0); ?>
+        <td class="text-center">
+            <?php if ($puede_editar_if): ?>
+                <a href="#" class="link-primary text-decoration-underline" title="Click para modificar"
+                   onclick="abrirModalEditarInfFin(<?php echo $m['id']; ?>, <?php echo intval($m['inf_fin']); ?>); return false;">
+                    <?php echo htmlspecialchars($m['nombre_categoria'] . ' / ' . $m['nombre_clasificacion']); ?> <i class="bi bi-pencil-square small"></i>
+                </a>
+            <?php else: ?>
+                <?php echo htmlspecialchars($m['nombre_categoria'] . ' / ' . $m['nombre_clasificacion']); ?>
+            <?php endif; ?>
+        </td>
         <td class="text-center"><?php echo $m['banco']; ?></td>
         <td class="text-center"><?php echo $m['cheque_num']; ?></td>
         <td class="text-center"><?php echo $m['nombre_quien_registra']; ?></td>
@@ -244,7 +261,7 @@ $(document).ready(function() {
                     <i class="bi bi-check-all"></i> Aprobado
                 </span>
             <?php elseif ($_SESSION["user_rol"] == 3 || $_SESSION["user_rol"] == 4): ?> 
-                <a href="aprobar_movimiento.php?id=<?php echo $m['id']; ?>" 
+                <a href="aprobar_movimiento.php?id=<?php echo $m['id']; ?>&return=validar_movimientos_401.php"
                    class="btn btn-sm btn-outline-success" 
                    onclick="return confirm('�0�7Confirmar revisi��n de este movimiento?');">
                     <i class="bi bi-check-circle"></i> Aprobar
@@ -294,5 +311,7 @@ function abrirModalAnular(id) {
     myModal.show();
 }
 </script>
+
+<?php include 'inf_fin_modales.php'; ?>
 </body>
 </html>

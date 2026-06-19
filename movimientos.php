@@ -498,7 +498,7 @@ $f_texto  = $_GET['f_texto']  ?? '';
                     <i class="bi bi-check-all"></i> Aprobado
                 </span>
             <?php elseif ($_SESSION["user_rol"] == 3 || $_SESSION["user_rol"] == 4): ?> 
-                <a href="aprobar_movimiento.php?id=<?php echo $m['id']; ?>" 
+                <a href="aprobar_movimiento.php?id=<?php echo $m['id']; ?>&return=movimientos.php"
                    class="btn btn-sm btn-outline-success" 
                    onclick="return confirm('�0�7Confirmar revisi��n de este movimiento?');">
                     <i class="bi bi-check-circle"></i> Aprobar
