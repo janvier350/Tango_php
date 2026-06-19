@@ -19,7 +19,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         # Ajusta esta ruta a la carpeta de tu proyecto en el hosting
-        server-dir: ./public_html/Flujo_caja/ 
+        server-dir: ./public_html/Tango/
         # Excluir carpetas que no necesites subir (como las de GitHub)
         exclude: |
           **/.git*

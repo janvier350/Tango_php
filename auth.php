@@ -2,7 +2,7 @@
 session_start();
 
 /**
- * Verifica si el usuario está autenticado.
+ * Verifica si el usuario est锟斤拷 autenticado.
  */
 function verificar_auth() {
     if (!isset($_SESSION['auth']) || $_SESSION['auth'] !== true) {
@@ -12,7 +12,7 @@ function verificar_auth() {
 }
 
 /**
- * Redirección inteligente al iniciar sesión.
+ * Redirecci锟斤拷n inteligente al iniciar sesi锟斤拷n.
  * Rol 1: Administrador -> Va al Dashboard o Index principal.
  * Rol 2: Usuario -> Va directo a Movimientos.
  */
@@ -22,7 +22,7 @@ function redireccionar_segun_rol() {
 
         switch ($rol) {
             case 1: // ADMIN
-                header("Location: index.php"); // O la página de reportes generales
+                header("Location: index.php"); // O la p锟斤拷gina de reportes generales
                 break;
             case 2: // USUARIO OPERATIVO
                 header("Location: movimientos.php");
@@ -39,21 +39,21 @@ function redireccionar_segun_rol() {
 }
 
 /**
- * OPCIONAL: Función para proteger páginas exclusivas de Admin.
- * Úsala en archivos que el Rol 2 NO deba ver.
+ * OPCIONAL: Funci锟斤拷n para proteger p锟斤拷ginas exclusivas de Admin.
+ * 锟�0锟�3sala en archivos que el Rol 2 NO deba ver.
  */
 function solo_admin() {
     verificar_auth();
     if ($_SESSION['user_rol'] != 1) {
-        // Si no es admin, lo mandamos a su página de movimientos con un mensaje
+        // Si no es admin, lo mandamos a su p锟斤拷gina de movimientos con un mensaje
         header("Location: ../movimientos.php?error=no_admin");
         exit;
     }
 }
 
-// Función para cerrar sesión
+// Funci锟斤拷n para cerrar sesi锟斤拷n
 if (isset($_GET['logout'])) {
-    // Aseguramos que la sesión esté activa para poder destruirla
+    // Aseguramos que la sesi锟斤拷n est锟斤拷 activa para poder destruirla
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
@@ -62,12 +62,12 @@ if (isset($_GET['logout'])) {
     session_unset();
     session_destroy();
 
-    // Opción A: Ruta absoluta desde la raíz del dominio (Recomendada)
-    // Esto funcionará sin importar si el script se llama desde /control/ o la raíz
-    header("Location: /Flujo_caja/login.php");
+    // Opci锟斤拷n A: Ruta absoluta desde la ra锟斤拷z del dominio (Recomendada)
+    // Esto funcionar锟斤拷 sin importar si el script se llama desde /control/ o la ra锟斤拷z
+    header("Location: /Tango/login.php");
 
-    /* Opción B: URL Completa (Por si tienes configuraciones de .htaccess complejas)
-    header("Location: https://www.buadnet.com.ec/Flujo_caja/login.php"); 
+    /* Opci锟斤拷n B: URL Completa (Por si tienes configuraciones de .htaccess complejas)
+    header("Location: https://www.buadnet.com.ec/Tango/login.php");
     */
 
     exit;
