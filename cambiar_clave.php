@@ -63,6 +63,7 @@ if (isset($_POST['cambiar_clave_admin']) && $_SESSION['user_rol'] == 1) {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cambiar Contraseña</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">

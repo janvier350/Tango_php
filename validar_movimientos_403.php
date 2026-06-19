@@ -74,6 +74,7 @@ if (isset($_POST['reg_mov'])) {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <title>TANGO | Sistema de Caja</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="estilos.css">
@@ -160,8 +161,8 @@ $(document).ready(function() {
             
             <br>
         <div class="table-responsive bg-white shadow-sm p-3">
-            
-            <table class="table table-sm table-bordered table-hover" style="font-size: 0.75rem;"> 
+            <?php include 'filtro_revision.php'; ?>
+            <table id="tablaValidacion" class="table table-sm table-bordered table-hover" style="font-size: 0.75rem;">
             
                 <thead class="table-secondary text-center">
                     <tr>
@@ -219,7 +220,7 @@ $(document).ready(function() {
             $saldo_acumulado += ($m['importe_recibido'] - $m['importe_entregado']);
         }
     ?>
-    <tr style="<?php echo $es_anulado ? 'background-color: #f8d7da; opacity: 0.6; text-decoration: line-through;' : ''; ?>">
+    <tr data-estado-rev="<?php echo $es_anulado ? 'anulado' : (($m['ID_USUARIO_REVISA'] > 0) ? 'aprobado' : 'pendiente'); ?>" data-proyecto="<?php echo htmlspecialchars($m['nombre_proyecto'] ?? ''); ?>" data-fecha="<?php echo date('Y-m-d', strtotime($m['fecha'])); ?>" style="<?php echo $es_anulado ? 'background-color: #f8d7da; opacity: 0.6; text-decoration: line-through;' : ''; ?>">
         <td class="text-center"><?php echo $m['id']; ?></td>
         <td class="text-center"><?php echo date('d-m-Y', strtotime($m['fecha'])); ?></td>
         <td class="text-center"><?php echo htmlspecialchars($m['nombre_proyecto'] ?? 'N/A'); ?></td>
