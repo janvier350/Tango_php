@@ -171,6 +171,7 @@ $json_egresos  = json_encode($data_egr_tend);
     </style>
 </head>
 <body class="bg-light">
+    <?php include 'navbar.php'; ?>
 
     <div class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
