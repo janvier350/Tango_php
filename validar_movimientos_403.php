@@ -219,7 +219,7 @@ $(document).ready(function() {
             $saldo_acumulado += ($m['importe_recibido'] - $m['importe_entregado']);
         }
     ?>
-    <tr data-estado-rev="<?php echo $es_anulado ? 'anulado' : (($m['ID_USUARIO_REVISA'] > 0) ? 'aprobado' : 'pendiente'); ?>" style="<?php echo $es_anulado ? 'background-color: #f8d7da; opacity: 0.6; text-decoration: line-through;' : ''; ?>">
+    <tr data-estado-rev="<?php echo $es_anulado ? 'anulado' : (($m['ID_USUARIO_REVISA'] > 0) ? 'aprobado' : 'pendiente'); ?>" data-proyecto="<?php echo htmlspecialchars($m['nombre_proyecto'] ?? ''); ?>" data-fecha="<?php echo date('Y-m-d', strtotime($m['fecha'])); ?>" style="<?php echo $es_anulado ? 'background-color: #f8d7da; opacity: 0.6; text-decoration: line-through;' : ''; ?>">
         <td class="text-center"><?php echo $m['id']; ?></td>
         <td class="text-center"><?php echo date('d-m-Y', strtotime($m['fecha'])); ?></td>
         <td class="text-center"><?php echo htmlspecialchars($m['nombre_proyecto'] ?? 'N/A'); ?></td>
