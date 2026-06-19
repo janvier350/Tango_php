@@ -161,6 +161,13 @@ $json_egresos  = json_encode($data_egr_tend);
         .card-dash { border: none; border-radius: 15px; transition: transform 0.2s; }
         .card-dash:hover { transform: translateY(-5px); }
         .icon-box { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+        .heatmap-row {
+            display: grid;
+            grid-template-columns: 40px repeat(12, 1fr);
+            align-items: center;
+            column-gap: 4px;
+        }
+        .heatmap-cell, .heatmap-cell-empty { height: 24px; }
     </style>
 </head>
 <body class="bg-light">
@@ -287,29 +294,29 @@ $json_egresos  = json_encode($data_egr_tend);
         <span class="badge bg-secondary small">Indicador: Intensidad por volumen ($) diario</span>
     </div>
     <div class="card-body overflow-auto">
-        <div class="d-flex flex-row justify-content-between text-center fw-bold text-muted mb-2 small" style="min-width: 800px;">
-            <div style="width: 40px;">Día</div>
+        <div class="heatmap-row text-center fw-bold text-muted mb-2 small" style="min-width: 800px;">
+            <div>Día</div>
             <?php foreach ($meses_nombres as $m_num => $m_nom): ?>
-                <div class="flex-fill"><?php echo $m_nom; ?></div>
+                <div><?php echo $m_nom; ?></div>
             <?php endforeach; ?>
         </div>
 
         <div class="d-flex flex-column" style="min-width: 800px;">
             <?php for ($dia = 1; $dia <= 31; $dia++): ?>
-                <div class="d-flex flex-row align-items-center mb-1">
-                    <div class="text-end pe-2 small fw-bold text-muted" style="width: 40px; font-size: 0.75rem;">
+                <div class="heatmap-row mb-1">
+                    <div class="text-end pe-2 small fw-bold text-muted" style="font-size: 0.75rem;">
                         <?php echo $dia; ?>
                     </div>
-                    
-                    <?php for ($mes = 1; $mes <= 12; $mes++): 
+
+                    <?php for ($mes = 1; $mes <= 12; $mes++):
                         // Verificamos si el día existe en ese mes específico (ej: 31 de Febrero no existe)
                         if (!checkdate($mes, $dia, $anio_actual)) {
-                            echo '<div class="flex-fill m-1 bg-light border-0" style="height: 24px; opacity: 0.2;"></div>';
+                            echo '<div class="heatmap-cell-empty bg-light border-0" style="opacity: 0.2;"></div>';
                             continue;
                         }
 
                         $valor = $datos_mapa[$mes][$dia] ?? 0;
-                        
+
                         // --- LÓGICA DE INDICADORES (COLOR SEGÚN INTENSIDAD) ---
                         $bg_color = 'bg-white text-muted'; // Sin movimientos
                         $border = 'border: 1px solid #e9ecef;';
@@ -330,8 +337,8 @@ $json_egresos  = json_encode($data_egr_tend);
                         }
                     ?>
                         <?php if ($valor > 0): ?>
-                        <div class="flex-fill m-1 rounded text-center small d-flex align-items-center justify-content-center heatmap-cell <?php echo $bg_color; ?>"
-                             style="height: 24px; font-size: 0.65rem; cursor: pointer; <?php echo $border; ?>"
+                        <div class="rounded text-center small d-flex align-items-center justify-content-center heatmap-cell <?php echo $bg_color; ?>"
+                             style="font-size: 0.65rem; cursor: pointer; <?php echo $border; ?>"
                              title="<?php echo $title_hint; ?> (Día <?php echo $dia; ?>/<?php echo $mes; ?>)"
                              data-dia="<?php echo $dia; ?>"
                              data-mes="<?php echo $mes; ?>"
@@ -340,14 +347,14 @@ $json_egresos  = json_encode($data_egr_tend);
                             $<?php echo round($valor); ?>
                         </div>
                         <?php else: ?>
-                        <div class="flex-fill m-1 rounded <?php echo $bg_color; ?>"
-                             style="height: 24px; <?php echo $border; ?>"></div>
+                        <div class="rounded heatmap-cell-empty <?php echo $bg_color; ?>"
+                             style="<?php echo $border; ?>"></div>
                         <?php endif; ?>
                     <?php endfor; ?>
                 </div>
             <?php endfor; ?>
         </div>
-        
+
         <div class="d-flex justify-content-end gap-3 mt-3 small text-muted">
             <span><span class="badge border bg-white text-dark">■</span> Sin flujo</span>
             <span><span class="badge" style="background-color: #d1e7dd; color: #0f5132;">■</span> Flujo Bajo (< $300)</span>
