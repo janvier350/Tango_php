@@ -30,7 +30,7 @@ $res_cat = $conn->query($sql_cat);
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reportes Mensuales - JVARAS</title>
+    <title>TANGO | Reportes Mensuales</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 </head>

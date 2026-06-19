@@ -1,10 +1,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow">
   <div class="container-fluid px-4">
     <a class="navbar-brand fw-bold" href="index.php">
-        <i class="bi bi-safe2 me-2"></i>SISTEMA DE CAJA
-    </a>
-     <a class="navbar-brand fw-bold" href="index.php">
-        <i class="bi bi-safe2 me-2"></i>USUARIO
+        <i class="bi bi-safe2 me-2"></i>TANGO
     </a>
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
