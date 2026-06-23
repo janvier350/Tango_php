@@ -21,7 +21,14 @@ jobs:
         # Ajusta esta ruta a la carpeta de tu proyecto en el hosting
         server-dir: ./public_html/Tango/
         # Excluir carpetas que no necesites subir (como las de GitHub)
+        # Nota: "**/.git*" solo bloquea el ultimo segmento de la ruta, NO el
+        # contenido interno de la carpeta .git (ej: .git/objects/12/abc no
+        # coincide). Por eso se agrega "**/.git*/**" para excluir tambien
+        # todo lo que esta DENTRO de .git/ y .github/.
         exclude: |
           **/.git*
+          **/.git*/**
           **/.github*
+          **/.github*/**
           **/node_modules*
+          **/node_modules*/**
