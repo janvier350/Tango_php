@@ -110,6 +110,12 @@ $f_texto  = $_GET['f_texto']  ?? '';
         tfoot input { width: 100%; font-size: 0.7rem; padding: 2px 4px; border: 1px solid #ced4da; border-radius: 3px; }
         .dataTables_wrapper .dataTables_filter { display: none; }
 
+        /* Tabla responsive: scroll horizontal en pantallas chicas, columnas angostas */
+        .table-responsive { overflow-x: auto; }
+        #tablaMovimientos { width: 100% !important; }
+        #tablaMovimientos th.col-secuencia, #tablaMovimientos td:nth-child(1) { width: 60px; white-space: nowrap; }
+        #tablaMovimientos th.col-fecha, #tablaMovimientos td:nth-child(2) { width: 85px; white-space: nowrap; }
+
         /* Dictado por voz */
         .btn-mic { transition: all .2s; }
         .btn-mic.escuchando {
@@ -381,8 +387,8 @@ $f_texto  = $_GET['f_texto']  ?? '';
 
                 <thead class="table-secondary text-center">
                     <tr>
-                        <th>SECUENCIA</th>
-                        <th>FECHA</th>
+                        <th class="col-secuencia">SECUENCIA</th>
+                        <th class="col-fecha">FECHA</th>
                         <th>PROYECTO</th>
                         <th>BENEFICIARIO</th>
                         <th>INTERMEDIARIO</th>
@@ -396,7 +402,6 @@ $f_texto  = $_GET['f_texto']  ?? '';
                         <th>INF.FIN</th>
                         <th>BANCO</th>
                         <th>CHEQUE #</th>
-                        <th># USUARIO</th>
                         <th># REVISADO</th>
                         <th>FECHA REGISTRO</th>
                         <th>APROBAR</th>
@@ -417,7 +422,6 @@ $f_texto  = $_GET['f_texto']  ?? '';
                         <th><input type="text" placeholder="Buscar..." class="col-search"></th>
                         <th><input type="text" placeholder="Buscar..." class="col-search"></th>
                         <th><input type="text" placeholder="Buscar..." class="col-search"></th>
-                        <th></th>
                         <th></th>
                         <th></th>
                         <th></th>
@@ -487,7 +491,6 @@ $f_texto  = $_GET['f_texto']  ?? '';
         <td class="text-center"><?php echo $m['nombre_categoria']; ?> / <?php echo $m['nombre_clasificacion']; ?></td>
         <td class="text-center"><?php echo $m['banco']; ?></td>
         <td class="text-center"><?php echo $m['cheque_num']; ?></td>
-        <td class="text-center"><?php echo $m['ID_USUARIO']; ?></td>
        <td class="text-center fw-bold text-primary">
             <?php echo htmlspecialchars($m['nombre_revisor'] ?? '---'); ?>
         </td>
@@ -810,8 +813,11 @@ $(document).ready(function() {
         language: {
             url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
         },
+        autoWidth: false,
         columnDefs: [
-            { orderable: false, targets: [8, 18, 19] }
+            { orderable: false, targets: [8, 17, 18] },
+            { width: '60px', targets: 0 },
+            { width: '85px', targets: 1 }
         ],
         order: []
     });

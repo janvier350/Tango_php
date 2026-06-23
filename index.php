@@ -354,7 +354,9 @@ if (isset($_SESSION["user_rol"])) {
             <a class="dropdown-item" href="#">OFICINA : <?php echo $_SESSION["oficina"]; ?></a>
             <a class="dropdown-item" href="#">OFICINA ID: <?php echo $_SESSION["oficina_ID"]; ?></a>
             <a class="dropdown-item" href="#">ROL : <?php echo $_SESSION["oficina_ROL"]; ?></a>
+            <?php if ($_SESSION["user_rol"] == 3): ?>
             <a class="dropdown-item" href="dashboard.php"> DASHBOARD</a>
+            <?php endif; ?>
         </div>
     </div>
     
