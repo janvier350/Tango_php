@@ -119,6 +119,12 @@ $f_texto  = $_GET['f_texto']  ?? '';
         #tablaMovimientos th.col-fecha, #tablaMovimientos td:nth-child(2) { white-space: nowrap; }
         #tablaMovimientos td { white-space: normal; word-break: break-word; }
         .dataTables_scrollBody { overflow-x: auto !important; }
+        /* table-layout: fixed evita que el texto largo (ej. nombres de beneficiarios)
+           expanda una columna en el cuerpo mas alla de lo que mide en el encabezado,
+           que es lo que causaba el desalineamiento entre columnas y datos */
+        #tablaMovimientos_wrapper table.dataTable { table-layout: fixed !important; }
+        #tablaMovimientos_wrapper table.dataTable td,
+        #tablaMovimientos_wrapper table.dataTable th { overflow: hidden; }
 
         /* Dictado por voz */
         .btn-mic { transition: all .2s; }
