@@ -402,7 +402,6 @@ $f_texto  = $_GET['f_texto']  ?? '';
                         <th>RECIBIDO (+)</th>
                         <th>ENTREGADO (-)</th>
                         <th class="table-primary">SALDO</th>
-                        <th>VALE</th>
                         <th>EMPRESA</th>
                         <th>DOC. SOPORTE</th>
                         <th>INF.FIN</th>
@@ -420,7 +419,6 @@ $f_texto  = $_GET['f_texto']  ?? '';
                         <th><input type="text" placeholder="Buscar..." class="col-search"></th>
                         <th><input type="text" placeholder="Buscar..." class="col-search"></th>
                         <th><input type="text" placeholder="Buscar..." class="col-search"></th>
-                        <th></th>
                         <th></th>
                         <th></th>
                         <th></th>
@@ -491,7 +489,6 @@ $f_texto  = $_GET['f_texto']  ?? '';
             $<?php echo number_format($saldo_acumulado, 2); ?>
         </td>
         
-        <td class="text-center"><?php echo $m['vale_ref']; ?></td>
         <td class="text-center"><?php echo $m['empresa']; ?></td>
         <td class="text-center"><?php echo $m['doc_soporte']; ?></td>
         <td class="text-center"><?php echo $m['nombre_categoria']; ?> / <?php echo $m['nombre_clasificacion']; ?></td>
@@ -520,14 +517,15 @@ $f_texto  = $_GET['f_texto']  ?? '';
 
         <td class="text-center">
             <div class="btn-group" role="group">
-                <a href="imprimir_vale.php?id=<?php echo $m['id']; ?>" target="_blank" class="btn btn-outline-primary btn-sm <?php echo $es_anulado ? 'disabled' : ''; ?>">PDF</a>
-                <a href="editar_movimiento.php?id=<?php echo $m['id']; ?>" class="btn btn-outline-warning btn-sm <?php echo $es_anulado ? 'disabled' : ''; ?>">EDITAR</a>
-                
+                <a href="imprimir_vale.php?id=<?php echo $m['id']; ?>" target="_blank" title="Ver PDF" class="btn btn-outline-primary btn-sm <?php echo $es_anulado ? 'disabled' : ''; ?>"><i class="bi bi-file-earmark-pdf"></i></a>
+                <a href="editar_movimiento.php?id=<?php echo $m['id']; ?>" title="Editar" class="btn btn-outline-warning btn-sm <?php echo $es_anulado ? 'disabled' : ''; ?>"><i class="bi bi-pencil-square"></i></a>
+
                 <?php if (!$es_anulado): ?>
-                <a href="anular_movimiento.php?id=<?php echo $m['id']; ?>" 
-                   class="btn btn-outline-danger btn-sm" 
+                <a href="anular_movimiento.php?id=<?php echo $m['id']; ?>"
+                   title="Anular"
+                   class="btn btn-outline-danger btn-sm"
                    onclick="return confirm('�0�7Est��s seguro de ANULAR este registro? El valor ya no contar�� en el saldo.');">
-                    ANULAR
+                    <i class="bi bi-x-circle"></i>
                 </a>
                 <?php else: ?>
                 <span class="badge bg-danger">ANULADO</span>
@@ -822,7 +820,7 @@ $(document).ready(function() {
         scrollX: true,
         autoWidth: false,
         columnDefs: [
-            { orderable: false, targets: [8, 17, 18] },
+            { orderable: false, targets: [8, 16, 17] },
             { width: '55px',  targets: 0 },  // SECUENCIA
             { width: '80px',  targets: 1 },  // FECHA
             { width: '90px',  targets: 2 },  // PROYECTO
@@ -830,16 +828,15 @@ $(document).ready(function() {
             { width: '130px', targets: 4 },  // INTERMEDIARIO
             { width: '160px', targets: 5 },  // DESCRIPCION
             { width: '70px',  targets: [6, 7, 8] }, // RECIBIDO/ENTREGADO/SALDO
-            { width: '50px',  targets: 9 },  // VALE
-            { width: '70px',  targets: 10 }, // EMPRESA
-            { width: '80px',  targets: 11 }, // DOC. SOPORTE
-            { width: '90px',  targets: 12 }, // INF.FIN
-            { width: '60px',  targets: 13 }, // BANCO
-            { width: '55px',  targets: 14 }, // CHEQUE #
-            { width: '70px',  targets: 15 }, // # REVISADO
-            { width: '70px',  targets: 16 }, // FECHA REGISTRO
-            { width: '70px',  targets: 17 }, // APROBAR
-            { width: '130px', targets: 18 }  // ACCIONES
+            { width: '70px',  targets: 9 },  // EMPRESA
+            { width: '80px',  targets: 10 }, // DOC. SOPORTE
+            { width: '90px',  targets: 11 }, // INF.FIN
+            { width: '60px',  targets: 12 }, // BANCO
+            { width: '55px',  targets: 13 }, // CHEQUE #
+            { width: '70px',  targets: 14 }, // # REVISADO
+            { width: '70px',  targets: 15 }, // FECHA REGISTRO
+            { width: '70px',  targets: 16 }, // APROBAR
+            { width: '110px', targets: 17 }  // ACCIONES
         ],
         order: []
     });
