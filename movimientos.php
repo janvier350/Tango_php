@@ -107,14 +107,18 @@ $f_texto  = $_GET['f_texto']  ?? '';
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <style>
         .filtros-card { background: #f8f9fa; border-left: 4px solid #0d6efd; }
-        tfoot input { width: 100%; font-size: 0.7rem; padding: 2px 4px; border: 1px solid #ced4da; border-radius: 3px; }
+        #tablaMovimientos thead input.col-search {
+            width: 100%; max-width: 100%; box-sizing: border-box;
+            font-size: 0.7rem; padding: 2px 4px; border: 1px solid #ced4da; border-radius: 3px;
+        }
         .dataTables_wrapper .dataTables_filter { display: none; }
 
-        /* Tabla responsive: scroll horizontal en pantallas chicas, columnas angostas */
-        .table-responsive { overflow-x: auto; }
-        #tablaMovimientos { width: 100% !important; }
-        #tablaMovimientos th.col-secuencia, #tablaMovimientos td:nth-child(1) { width: 60px; white-space: nowrap; }
-        #tablaMovimientos th.col-fecha, #tablaMovimientos td:nth-child(2) { width: 85px; white-space: nowrap; }
+        /* Tabla con scroll horizontal contenido (DataTables scrollX), columnas angostas */
+        .tabla-card-scroll { overflow: hidden; }
+        #tablaMovimientos th.col-secuencia, #tablaMovimientos td:nth-child(1) { white-space: nowrap; }
+        #tablaMovimientos th.col-fecha, #tablaMovimientos td:nth-child(2) { white-space: nowrap; }
+        #tablaMovimientos td { white-space: normal; word-break: break-word; }
+        .dataTables_scrollBody { overflow-x: auto !important; }
 
         /* Dictado por voz */
         .btn-mic { transition: all .2s; }
@@ -284,11 +288,13 @@ $f_texto  = $_GET['f_texto']  ?? '';
                   
                     <div class="col-md-6">
     <label class="small fw-bold text-primary d-flex align-items-center gap-1">INF. FINANCIERA
+        <?php if (in_array($_SESSION['user_rol'], [3, 4])): ?>
         <button type="button" class="btn btn-success btn-sm py-0 px-1 lh-1" style="font-size:0.75rem;"
             data-bs-toggle="modal" data-bs-target="#modalNuevaInfFin"
             title="Agregar nueva inf. financiera">
             <i class="bi bi-plus-lg"></i>
         </button>
+        <?php endif; ?>
     </label>
     <select name="id_reposicion" id="id_reposicion" class="form-select form-select-sm select2-buscable" required>
         <option value="">Escribe para buscar...</option>
@@ -381,7 +387,7 @@ $f_texto  = $_GET['f_texto']  ?? '';
             </div>
         </div>
 
-        <div class="table-responsive bg-white shadow-sm p-3">
+        <div class="tabla-card-scroll bg-white shadow-sm p-3">
 
             <table id="tablaMovimientos" class="table table-sm table-bordered table-hover" style="font-size: 0.75rem;">
 
@@ -813,11 +819,27 @@ $(document).ready(function() {
         language: {
             url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
         },
+        scrollX: true,
         autoWidth: false,
         columnDefs: [
             { orderable: false, targets: [8, 17, 18] },
-            { width: '60px', targets: 0 },
-            { width: '85px', targets: 1 }
+            { width: '55px',  targets: 0 },  // SECUENCIA
+            { width: '80px',  targets: 1 },  // FECHA
+            { width: '90px',  targets: 2 },  // PROYECTO
+            { width: '130px', targets: 3 },  // BENEFICIARIO
+            { width: '130px', targets: 4 },  // INTERMEDIARIO
+            { width: '160px', targets: 5 },  // DESCRIPCION
+            { width: '70px',  targets: [6, 7, 8] }, // RECIBIDO/ENTREGADO/SALDO
+            { width: '50px',  targets: 9 },  // VALE
+            { width: '70px',  targets: 10 }, // EMPRESA
+            { width: '80px',  targets: 11 }, // DOC. SOPORTE
+            { width: '90px',  targets: 12 }, // INF.FIN
+            { width: '60px',  targets: 13 }, // BANCO
+            { width: '55px',  targets: 14 }, // CHEQUE #
+            { width: '70px',  targets: 15 }, // # REVISADO
+            { width: '70px',  targets: 16 }, // FECHA REGISTRO
+            { width: '70px',  targets: 17 }, // APROBAR
+            { width: '130px', targets: 18 }  // ACCIONES
         ],
         order: []
     });
