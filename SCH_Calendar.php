@@ -637,6 +637,7 @@ document.addEventListener('DOMContentLoaded', function () {
             right:  'dayGridMonth,timeGridWeek,timeGridDay'
         },
         initialView: 'dayGridMonth',
+        eventDisplay: 'block',
         events: eventosAll,
 
         eventClick: function (info) {
