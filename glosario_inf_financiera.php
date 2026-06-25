@@ -4,10 +4,11 @@ require_once 'auth.php';
 verificar_auth();
 
 $id_rol = $_SESSION['user_rol'];
-if (!in_array($id_rol, [3, 4])) {
+if (!in_array($id_rol, [2, 3, 4])) {
     header("Location: movimientos.php");
     exit;
 }
+$puede_editar = in_array($id_rol, [3, 4]);
 
 $res = $conn->query("
     SELECT c.id AS cat_id, c.nombre AS cat_nombre, c.informacion AS cat_info,
@@ -62,11 +63,18 @@ while ($row = $res->fetch_assoc()) {
                    placeholder="Buscar categoría o concepto...">
         </div>
     </div>
+    <?php if ($puede_editar): ?>
     <p class="text-muted small">
         Agrega una breve descripción a cada categoría y concepto para que cualquier persona sepa a qué corresponde
         (ej: <code>CXC-XP</code> &rarr; <em>Cuentas por cobrar Xavier Parrales</em>).
         Los cambios se guardan automáticamente al presionar el botón de guardar de cada fila.
     </p>
+    <?php else: ?>
+    <p class="text-muted small">
+        Consulta a qué corresponde cada categoría y concepto de Inf. Financiera
+        (ej: <code>CXC-XP</code> &rarr; <em>Cuentas por cobrar Xavier Parrales</em>).
+    </p>
+    <?php endif; ?>
 
     <div class="accordion" id="acordeonGlosario">
         <?php foreach ($categorias as $cid => $cat): ?>
@@ -85,10 +93,13 @@ while ($row = $res->fetch_assoc()) {
                         <span class="input-group-text">Descripción de la categoría</span>
                         <input type="text" class="form-control glosario-input"
                                value="<?php echo htmlspecialchars($cat['informacion'] ?? ''); ?>"
-                               placeholder="¿Para qué se usa esta categoría?">
+                               placeholder="¿Para qué se usa esta categoría?"
+                               <?php echo $puede_editar ? '' : 'readonly'; ?>>
+                        <?php if ($puede_editar): ?>
                         <button class="btn btn-success btn-guardar-glosario d-none" type="button">
                             <i class="bi bi-check-lg"></i>
                         </button>
+                        <?php endif; ?>
                     </div>
 
                     <?php if (empty($cat['items'])): ?>
@@ -99,7 +110,7 @@ while ($row = $res->fetch_assoc()) {
                             <tr>
                                 <th style="width: 220px;">Concepto</th>
                                 <th>Descripción</th>
-                                <th style="width: 40px;"></th>
+                                <?php if ($puede_editar): ?><th style="width: 40px;"></th><?php endif; ?>
                             </tr>
                         </thead>
                         <tbody>
@@ -109,13 +120,16 @@ while ($row = $res->fetch_assoc()) {
                                 <td>
                                     <input type="text" class="form-control form-control-sm glosario-input"
                                            value="<?php echo htmlspecialchars($item['informacion'] ?? ''); ?>"
-                                           placeholder="¿A qué corresponde este concepto?">
+                                           placeholder="¿A qué corresponde este concepto?"
+                                           <?php echo $puede_editar ? '' : 'readonly'; ?>>
                                 </td>
+                                <?php if ($puede_editar): ?>
                                 <td>
                                     <button class="btn btn-sm btn-success btn-guardar-glosario d-none" type="button">
                                         <i class="bi bi-check-lg"></i>
                                     </button>
                                 </td>
+                                <?php endif; ?>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
