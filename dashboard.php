@@ -95,7 +95,8 @@ $anio_actual = date('Y');
 $sql_heatmap = "SELECT
                     MONTH(fecha) as mes,
                     DAY(fecha) as dia,
-                    SUM(importe_recibido + importe_entregado) as total_diario
+                    SUM(importe_recibido) as total_ingresos,
+                    SUM(importe_entregado) as total_egresos
                 FROM movimientos
                 WHERE YEAR(fecha) = ? AND id_oficina = ?
                 GROUP BY MONTH(fecha), DAY(fecha)";
@@ -105,10 +106,12 @@ $stmt_heat->bind_param("ii", $anio_actual, $id_oficina_consulta);
 $stmt_heat->execute();
 $res_heat = $stmt_heat->get_result();
 
-// Construimos un array indexado por [mes][dia] para dibujarlo fácil en HTML
-$datos_mapa = [];
+// Construimos un array indexado por [mes][dia] para cada tipo de flujo
+$datos_mapa_ingresos = [];
+$datos_mapa_egresos  = [];
 while ($row = $res_heat->fetch_assoc()) {
-    $datos_mapa[$row['mes']][$row['dia']] = $row['total_diario'];
+    $datos_mapa_ingresos[$row['mes']][$row['dia']] = $row['total_ingresos'];
+    $datos_mapa_egresos[$row['mes']][$row['dia']]  = $row['total_egresos'];
 }
 
 // Nombres de los meses para las cabeceras
@@ -116,6 +119,81 @@ $meses_nombres = [
     1 => "Ene", 2 => "Feb", 3 => "Mar", 4 => "Abr", 5 => "May", 6 => "Jun",
     7 => "Jul", 8 => "Ago", 9 => "Sep", 10 => "Oct", 11 => "Nov", 12 => "Dic"
 ];
+
+// Dibuja la grilla de mapa de calor (mes x día) para el array de datos recibido
+function render_mapa_calor($datos_mapa, $meses_nombres, $anio_actual, $id_oficina_consulta) {
+    ob_start();
+    ?>
+    <div class="heatmap-row text-center fw-bold text-muted mb-2 small" style="min-width: 800px;">
+        <div>Día</div>
+        <?php foreach ($meses_nombres as $m_num => $m_nom): ?>
+            <div><?php echo $m_nom; ?></div>
+        <?php endforeach; ?>
+    </div>
+
+    <div class="d-flex flex-column" style="min-width: 800px;">
+        <?php for ($dia = 1; $dia <= 31; $dia++): ?>
+            <div class="heatmap-row mb-1">
+                <div class="text-end pe-2 small fw-bold text-muted" style="font-size: 0.75rem;">
+                    <?php echo $dia; ?>
+                </div>
+
+                <?php for ($mes = 1; $mes <= 12; $mes++):
+                    // Verificamos si el día existe en ese mes específico (ej: 31 de Febrero no existe)
+                    if (!checkdate($mes, $dia, $anio_actual)) {
+                        echo '<div class="heatmap-cell-empty bg-light border-0" style="opacity: 0.2;"></div>';
+                        continue;
+                    }
+
+                    $valor = $datos_mapa[$mes][$dia] ?? 0;
+
+                    // --- LÓGICA DE INDICADORES (COLOR SEGÚN INTENSIDAD) ---
+                    $bg_color = 'bg-white text-muted'; // Sin movimientos
+                    $border = 'border: 1px solid #e9ecef;';
+                    $title_hint = "Sin movimientos";
+
+                    if ($valor > 0 && $valor < 300) {
+                        $bg_color = 'text-white';
+                        $border = 'background-color: #d1e7dd; border: 1px solid #bcd0c7; color: #0f5132 !important;'; // Verde Bajo
+                        $title_hint = "Bajo: $".number_format($valor, 2);
+                    } elseif ($valor >= 300 && $valor < 1000) {
+                        $bg_color = 'text-white';
+                        $border = 'background-color: #ffcaf2; border: 1px solid #ffb3ed; color: #aa0088 !important;'; // Promedio Medio (Rosa)
+                        $title_hint = "Medio: $".number_format($valor, 2);
+                    } elseif ($valor >= 1000) {
+                        $bg_color = 'text-white fw-bold';
+                        $border = 'background-color: #dc3545; border: 1px solid #b02a37;'; // Promedio Alto (Rojo Alerta)
+                        $title_hint = "¡ALTO VOLUMEN!: $".number_format($valor, 2);
+                    }
+                ?>
+                    <?php if ($valor > 0): ?>
+                    <div class="rounded text-center small d-flex align-items-center justify-content-center heatmap-cell <?php echo $bg_color; ?>"
+                         style="font-size: 0.65rem; cursor: pointer; <?php echo $border; ?>"
+                         title="<?php echo $title_hint; ?> (Día <?php echo $dia; ?>/<?php echo $mes; ?>)"
+                         data-dia="<?php echo $dia; ?>"
+                         data-mes="<?php echo $mes; ?>"
+                         data-anio="<?php echo $anio_actual; ?>"
+                         data-oficina="<?php echo $id_oficina_consulta; ?>">
+                        $<?php echo round($valor); ?>
+                    </div>
+                    <?php else: ?>
+                    <div class="rounded heatmap-cell-empty <?php echo $bg_color; ?>"
+                         style="<?php echo $border; ?>"></div>
+                    <?php endif; ?>
+                <?php endfor; ?>
+            </div>
+        <?php endfor; ?>
+    </div>
+
+    <div class="d-flex justify-content-end gap-3 mt-3 small text-muted">
+        <span><span class="badge border bg-white text-dark">■</span> Sin flujo</span>
+        <span><span class="badge" style="background-color: #d1e7dd; color: #0f5132;">■</span> Flujo Bajo (< $300)</span>
+        <span><span class="badge" style="background-color: #ffcaf2; color: #aa0088;">■</span> Flujo Normal ($300 - $1000)</span>
+        <span><span class="badge bg-danger">■</span> Promedio Alto (> $1000)</span>
+    </div>
+    <?php
+    return ob_get_clean();
+}
 
 // 6. QUERY: TENDENCIA DIARIA DEL PERIODO FILTRADO
 $sql_tendencia = "SELECT
@@ -295,73 +373,28 @@ $json_egresos  = json_encode($data_egr_tend);
         <span><i class="bi bi-grid-3x3-gap-fill me-2"></i> Flujo de Caja: Mapa de Calor (<?php echo $anio_actual; ?>)</span>
         <span class="badge bg-secondary small">Indicador: Intensidad por volumen ($) diario</span>
     </div>
-    <div class="card-body overflow-auto">
-        <div class="heatmap-row text-center fw-bold text-muted mb-2 small" style="min-width: 800px;">
-            <div>Día</div>
-            <?php foreach ($meses_nombres as $m_num => $m_nom): ?>
-                <div><?php echo $m_nom; ?></div>
-            <?php endforeach; ?>
-        </div>
-
-        <div class="d-flex flex-column" style="min-width: 800px;">
-            <?php for ($dia = 1; $dia <= 31; $dia++): ?>
-                <div class="heatmap-row mb-1">
-                    <div class="text-end pe-2 small fw-bold text-muted" style="font-size: 0.75rem;">
-                        <?php echo $dia; ?>
-                    </div>
-
-                    <?php for ($mes = 1; $mes <= 12; $mes++):
-                        // Verificamos si el día existe en ese mes específico (ej: 31 de Febrero no existe)
-                        if (!checkdate($mes, $dia, $anio_actual)) {
-                            echo '<div class="heatmap-cell-empty bg-light border-0" style="opacity: 0.2;"></div>';
-                            continue;
-                        }
-
-                        $valor = $datos_mapa[$mes][$dia] ?? 0;
-
-                        // --- LÓGICA DE INDICADORES (COLOR SEGÚN INTENSIDAD) ---
-                        $bg_color = 'bg-white text-muted'; // Sin movimientos
-                        $border = 'border: 1px solid #e9ecef;';
-                        $title_hint = "Sin movimientos";
-
-                        if ($valor > 0 && $valor < 300) {
-                            $bg_color = 'text-white';
-                            $border = 'background-color: #d1e7dd; border: 1px solid #bcd0c7; color: #0f5132 !important;'; // Verde Bajo
-                            $title_hint = "Bajo: $".number_format($valor, 2);
-                        } elseif ($valor >= 300 && $valor < 1000) {
-                            $bg_color = 'text-white';
-                            $border = 'background-color: #ffcaf2; border: 1px solid #ffb3ed; color: #aa0088 !important;'; // Promedio Medio (Rosa)
-                            $title_hint = "Medio: $".number_format($valor, 2);
-                        } elseif ($valor >= 1000) {
-                            $bg_color = 'text-white fw-bold';
-                            $border = 'background-color: #dc3545; border: 1px solid #b02a37;'; // Promedio Alto (Rojo Alerta)
-                            $title_hint = "¡ALTO VOLUMEN!: $".number_format($valor, 2);
-                        }
-                    ?>
-                        <?php if ($valor > 0): ?>
-                        <div class="rounded text-center small d-flex align-items-center justify-content-center heatmap-cell <?php echo $bg_color; ?>"
-                             style="font-size: 0.65rem; cursor: pointer; <?php echo $border; ?>"
-                             title="<?php echo $title_hint; ?> (Día <?php echo $dia; ?>/<?php echo $mes; ?>)"
-                             data-dia="<?php echo $dia; ?>"
-                             data-mes="<?php echo $mes; ?>"
-                             data-anio="<?php echo $anio_actual; ?>"
-                             data-oficina="<?php echo $id_oficina_consulta; ?>">
-                            $<?php echo round($valor); ?>
-                        </div>
-                        <?php else: ?>
-                        <div class="rounded heatmap-cell-empty <?php echo $bg_color; ?>"
-                             style="<?php echo $border; ?>"></div>
-                        <?php endif; ?>
-                    <?php endfor; ?>
-                </div>
-            <?php endfor; ?>
-        </div>
-
-        <div class="d-flex justify-content-end gap-3 mt-3 small text-muted">
-            <span><span class="badge border bg-white text-dark">■</span> Sin flujo</span>
-            <span><span class="badge" style="background-color: #d1e7dd; color: #0f5132;">■</span> Flujo Bajo (< $300)</span>
-            <span><span class="badge" style="background-color: #ffcaf2; color: #aa0088;">■</span> Flujo Normal ($300 - $1000)</span>
-            <span><span class="badge bg-danger">■</span> Promedio Alto (> $1000)</span>
+    <div class="card-body">
+        <ul class="nav nav-tabs" id="tabsMapaCalor" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active text-success fw-bold" id="tab-ingresos-btn" data-bs-toggle="tab"
+                        data-bs-target="#tab-ingresos" type="button" role="tab">
+                    <i class="bi bi-graph-up-arrow me-1"></i> Ingresos
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link text-danger fw-bold" id="tab-egresos-btn" data-bs-toggle="tab"
+                        data-bs-target="#tab-egresos" type="button" role="tab">
+                    <i class="bi bi-graph-down-arrow me-1"></i> Gastos
+                </button>
+            </li>
+        </ul>
+        <div class="tab-content border border-top-0 rounded-bottom p-3 overflow-auto">
+            <div class="tab-pane fade show active" id="tab-ingresos" role="tabpanel">
+                <?php echo render_mapa_calor($datos_mapa_ingresos, $meses_nombres, $anio_actual, $id_oficina_consulta); ?>
+            </div>
+            <div class="tab-pane fade" id="tab-egresos" role="tabpanel">
+                <?php echo render_mapa_calor($datos_mapa_egresos, $meses_nombres, $anio_actual, $id_oficina_consulta); ?>
+            </div>
         </div>
     </div>
 </div>

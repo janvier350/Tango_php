@@ -20,6 +20,7 @@
         <?php endif; ?>
         
         <?php if($_SESSION['user_rol'] == 3): ?>
+        <a class="nav-link px-3" href="dashboard.php"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
         <a class="nav-link px-3" href="movimientos_revisor.php"><i class="bi bi-journal-text me-1"></i> Movimientos Revisor</a>
         <?php endif; ?>
        <!-- <a class="nav-link px-3" href="usuarios.php"><i class="bi bi-people me-1"></i> Usuarios</a> -->
