@@ -10,6 +10,11 @@ if(!isset($_SESSION["rol"])){
     header("Location: break.php");
     exit();
 }
+if (isset($_SESSION['expire']) && time() > $_SESSION['expire']) {
+    session_destroy();
+    header("Location: expirada.php");
+    exit();
+}
 
 if(!isset($_GET['idCita']) || empty($_GET['idCita'])){
     die("Error: No se recibió el ID de la cita.");
@@ -52,6 +57,7 @@ $doctorAtiende = ($sessionNombres || $sessionApellidos)
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Atención - <?php echo htmlspecialchars($d['NOMBRES'].' '.$d['APELLIDOS']); ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
@@ -75,8 +81,66 @@ $doctorAtiende = ($sessionNombres || $sessionApellidos)
         }
     </style>
 </head>
-<body class="bg-light">
-<div class="container mt-4 mb-5">
+<body>
+<div class="app-container app-theme-white body-tabs-shadow fixed-sidebar fixed-header">
+
+    <!-- HEADER -->
+    <div class="app-header header-shadow">
+        <div class="app-header__logo">
+            <div class="logo-src"></div>
+            <div class="header__pane ml-auto">
+                <button type="button" class="hamburger close-sidebar-btn hamburger--elastic" data-class="closed-sidebar">
+                    <span class="hamburger-box"><span class="hamburger-inner"></span></span>
+                </button>
+            </div>
+        </div>
+        <div class="app-header__mobile-menu">
+            <button type="button" class="hamburger hamburger--elastic mobile-toggle-nav">
+                <span class="hamburger-box"><span class="hamburger-inner"></span></span>
+            </button>
+        </div>
+        <div class="app-header__menu">
+            <button type="button" class="btn-icon btn-icon-only btn btn-primary btn-sm mobile-toggle-header-nav">
+                <span class="btn-icon-wrapper"><i class="fa fa-ellipsis-v fa-w-6"></i></span>
+            </button>
+        </div>
+        <div class="app-header__content">
+            <div class="app-header-left"></div>
+            <div class="app-header-right">
+                <div class="header-btn-lg pr-0">
+                    <div class="widget-content p-0">
+                        <div class="widget-content-wrapper">
+                            <div class="widget-content-left ml-3 header-user-info">
+                                <div class="widget-heading"><?php echo htmlspecialchars($sessionNombres); ?></div>
+                                <div class="widget-subheading"><?php echo htmlspecialchars($_SESSION['rol'] ?? ''); ?></div>
+                            </div>
+                            <div class="widget-content-left ms-3">
+                                <div class="btn-group">
+                                    <a data-toggle="dropdown" class="p-0 btn" href="#">
+                                        <i class="fa fa-angle-down ml-2 opacity-8"></i>
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        <a href="salir.php" class="dropdown-item">Cerrar Sesión</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-main">
+        <!-- SIDEBAR -->
+        <div class="app-sidebar sidebar-shadow">
+            <?php include("./menu/menu_adm.php"); ?>
+        </div>
+
+        <div class="app-main__outer">
+            <div class="app-main__inner">
+
+<div class="container-fluid mt-1 mb-5">
     <div class="card shadow">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
@@ -199,7 +263,12 @@ $doctorAtiende = ($sessionNombres || $sessionApellidos)
 
         </div>
     </div>
-</div>
+</div><!-- /container-fluid -->
+
+            </div><!-- /app-main__inner -->
+        </div><!-- /app-main__outer -->
+    </div><!-- /app-main -->
+</div><!-- /app-container -->
 
 <script>
 const DATOS_CITA = {
