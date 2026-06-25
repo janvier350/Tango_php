@@ -28,14 +28,13 @@ $sql = "SELECT
             A.FECHA_CITA, A.HORA_INICIO, A.IDDOCTOR,
             D.NOMBRES  AS DOC_NOMBRES,
             D.APELLIDOS AS DOC_APELLIDOS,
-            D.ESPECIALIDAD,
             AG.DESCRIPCION AS AGENCIA_NOMBRE,
             AG.DIRECCION  AS AGENCIA_DIRECCION,
             AG.TELEFONO   AS AGENCIA_TEL,
             TC.NOMBRES    AS TIPO_CONSULTA
         FROM AG_CITA A
         INNER JOIN AG_PACIENTE     P  ON A.IDPACIENTE      = P.IDPACIENTE
-        LEFT  JOIN ADM_DOCTOR      D  ON A.IDDOCTOR         = D.IDDOCTOR
+        LEFT  JOIN ADM_USUARIO     D  ON A.IDDOCTOR         = D.IDADM_USUARIO
         LEFT  JOIN ADM_AGENCIA     AG ON AG.IDAGENCIA        = 1
         LEFT  JOIN AG_TIPOCONSULTA TC ON A.IDTIPOCONSULTA   = TC.IDTIPOCONSULTA
         WHERE A.IDCITA = '$idCita'";
@@ -280,7 +279,7 @@ const DATOS_CITA = {
     pacienteCedula:  "<?php echo addslashes($d['CEDULA']); ?>",
     docNombre:       "<?php echo addslashes($docNombreCompleto); ?>",
     docApellido:     "<?php echo addslashes($d['DOC_APELLIDOS']); ?>",
-    docEspecialidad: "<?php echo addslashes($d['ESPECIALIDAD']); ?>",
+    docEspecialidad: "",
     atiendNombre:    "<?php echo addslashes($doctorAtiende); ?>",
     atiendApellido:  "<?php echo addslashes($sessionApellidos); ?>",
     agenciaNombre:   "<?php echo addslashes($d['AGENCIA_NOMBRE']); ?>",

@@ -31,7 +31,7 @@ $query = "SELECT
           FROM AG_CITA A
           INNER JOIN AG_PACIENTE B     ON A.IDPACIENTE      = B.IDPACIENTE
           INNER JOIN AG_TIPOCONSULTA C ON A.IDTIPOCONSULTA  = C.IDTIPOCONSULTA
-          INNER JOIN ADM_DOCTOR D      ON A.IDDOCTOR        = D.IDDOCTOR
+          INNER JOIN ADM_USUARIO D     ON A.IDDOCTOR        = D.IDADM_USUARIO
           WHERE A.ESTADO = 'A'";
 
 $resultado = $conexion->query($query);
@@ -66,23 +66,17 @@ while ($row = $resultado->fetch_assoc()) {
     );
 }
 
-$sqlDoctores = "SELECT D.IDDOCTOR, D.NOMBRES, D.APELLIDOS
-                FROM ADM_DOCTOR D
-                WHERE D.ESTADO = 'A'
-                  AND EXISTS (
-                      SELECT 1 FROM ADM_USUARIO U
-                      INNER JOIN ADM_ROL R ON U.IDADM_ROL = R.IDADM_ROL
-                      WHERE R.CARGO = 'DOCTOR'
-                        AND U.ESTADO = 'A'
-                        AND U.NOMBRES = D.NOMBRES
-                        AND U.APELLIDOS = D.APELLIDOS
-                  )
-                ORDER BY D.NOMBRES";
+$sqlDoctores = "SELECT U.IDADM_USUARIO, U.NOMBRES, U.APELLIDOS
+                FROM ADM_USUARIO U
+                INNER JOIN ADM_ROL R ON U.IDADM_ROL = R.IDADM_ROL
+                WHERE R.CARGO = 'DOCTOR'
+                  AND U.ESTADO = 'A'
+                ORDER BY U.NOMBRES";
 $resultDoctores  = $conexion->query($sqlDoctores);
 $doctoresActivos = array();
 while ($d = $resultDoctores->fetch_assoc()) {
     $doctoresActivos[] = array(
-        'id'     => $d['IDDOCTOR'],
+        'id'     => $d['IDADM_USUARIO'],
         'nombre' => $d['NOMBRES'] . ' ' . $d['APELLIDOS'],
     );
 }
