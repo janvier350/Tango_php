@@ -11,7 +11,7 @@ if (!$idPaciente) { echo '<p class="text-danger p-3">ID no válido.</p>'; exit; 
 
 // Datos del paciente
 $stmtP = $conexion->prepare(
-    "SELECT NOMBRES, APELLIDOS, CEDULA, TELEFONO, EMAIL, FECHANACIMIENTO, SEX, GENDER
+    "SELECT NOMBRES, APELLIDOS, CEDULA, TELEFONO, EMAIL, FECHANACIMIENTO, SEX, GENDER, FECHA_REGISTRO
      FROM AG_PACIENTE WHERE IDPACIENTE = ? LIMIT 1"
 );
 $stmtP->bind_param("i", $idPaciente);
@@ -139,6 +139,9 @@ function imcColor($imc) {
                 <?php endif; ?>
                 <span><i class="bi bi-telephone text-muted me-1"></i><?php echo htmlspecialchars($pac['TELEFONO'] ?? '—'); ?></span>
                 <span><i class="bi bi-envelope text-muted me-1"></i><?php echo htmlspecialchars($pac['EMAIL'] ?? '—'); ?></span>
+                <?php if (!empty($pac['FECHA_REGISTRO'])): ?>
+                    <span><i class="bi bi-calendar-plus text-muted me-1"></i>Registrado: <?php echo date('d/m/Y', strtotime($pac['FECHA_REGISTRO'])); ?></span>
+                <?php endif; ?>
             </div>
         </div>
 

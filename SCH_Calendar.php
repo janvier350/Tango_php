@@ -392,6 +392,18 @@ while ($d = $resultDoctores->fetch_assoc()) {
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Location</label>
+                        <select class="form-select select-busqueda" name="IdAgencia" required>
+                            <option value="">Seleccione location...</option>
+                            <?php
+                            $queryAg = $conexion->query("SELECT IDAGENCIA, DESCRIPCION FROM ADM_AGENCIA WHERE ESTADO = 1 ORDER BY DESCRIPCION");
+                            while ($v = $queryAg->fetch_assoc()):
+                            ?>
+                            <option value="<?php echo $v['IDAGENCIA']; ?>"><?php echo htmlspecialchars($v['DESCRIPCION']); ?></option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="bi bi-calendar-check"></i> Agendar
                     </button>
