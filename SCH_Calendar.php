@@ -58,8 +58,8 @@ while ($row = $resultado->fetch_assoc()) {
         'title'           => $row['PACIENTE'],
         'start'           => $row['FECHA_CITA'] . 'T' . $row['HORA_INICIO'],
         'end'             => $row['FECHA_CITA'] . 'T' . $row['HORA_FIN'],
-        'backgroundColor' => $colorTipo,
-        'borderColor'     => $colorEstado,
+        'backgroundColor' => $colorEstado,
+        'borderColor'     => $colorTipo,
         'textColor'       => '#ffffff',
         'extendedProps'   => array(
             'cita'      => $row['ESTADO_CITA'],
@@ -113,11 +113,19 @@ while ($d = $resultDoctores->fetch_assoc()) {
         .fc-event { cursor: pointer; font-size: 0.85em; padding: 2px 5px; }
         #eventModal .btn { transition: all 0.3s ease; white-space: nowrap; }
         #eventModal .btn:hover { transform: translateY(-2px); box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+        /* Franja izquierda = tipo de consulta (el fondo del evento sigue indicando el estado) */
+        .fc-daygrid-event, .fc-timegrid-event, .fc-list-event-dot {
+            border-width: 0 0 0 5px !important;
+            border-style: solid !important;
+            border-radius: 3px;
+        }
+        .fc-list-event-dot { border-radius: 50%; border-width: 5px !important; }
         /* Leyenda de colores */
         .leyenda-calendario { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; font-size: 0.8rem; }
         .leyenda-item { display: flex; align-items: center; gap: 5px; }
         .leyenda-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
         .leyenda-dot-borde { width: 12px; height: 12px; border-radius: 50%; display: inline-block; background: #fff; border: 3px solid #999; box-sizing: border-box; }
+        .leyenda-franja { width: 16px; height: 12px; display: inline-block; background: #fff; border: 1px solid #ddd; border-left: 5px solid #999; box-sizing: border-box; border-radius: 2px; }
         .leyenda-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; color: #888; font-weight: 600; margin-right: 4px; }
 
         /* ── Vista por Doctor ─────────────────────────────────────── */
@@ -257,16 +265,16 @@ while ($d = $resultDoctores->fetch_assoc()) {
                     <div class="card-body">
                         <!-- Leyenda de colores -->
                         <div class="leyenda-calendario">
-                            <span class="leyenda-label">Estado (borde):</span>
-                            <span class="leyenda-item"><span class="leyenda-dot-borde" style="border-color:#ffc107"></span> Pendiente</span>
-                            <span class="leyenda-item"><span class="leyenda-dot-borde" style="border-color:#28a745"></span> Confirmada</span>
-                            <span class="leyenda-item"><span class="leyenda-dot-borde" style="border-color:#6f42c1"></span> Atendida</span>
-                            <span class="leyenda-item"><span class="leyenda-dot-borde" style="border-color:#dc3545"></span> Cancelada</span>
+                            <span class="leyenda-label">Estado (relleno):</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#ffc107"></span> Pendiente</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#28a745"></span> Confirmada</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#6f42c1"></span> Atendida</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#dc3545"></span> Cancelada</span>
                         </div>
                         <div class="leyenda-calendario">
-                            <span class="leyenda-label">Tipo de consulta (color):</span>
+                            <span class="leyenda-label">Tipo de consulta (franja izquierda):</span>
                             <?php foreach ($tiposConsultaActivos as $tc): ?>
-                                <span class="leyenda-item"><span class="leyenda-dot" style="background:<?php echo htmlspecialchars($tc['color']); ?>"></span> <?php echo htmlspecialchars($tc['nombre']); ?></span>
+                                <span class="leyenda-item"><span class="leyenda-franja" style="border-left-color:<?php echo htmlspecialchars($tc['color']); ?>"></span> <?php echo htmlspecialchars($tc['nombre']); ?></span>
                             <?php endforeach; ?>
                         </div>
                         <div id="calendar1"></div>
@@ -277,16 +285,16 @@ while ($d = $resultDoctores->fetch_assoc()) {
                     <div class="card-body">
                         <!-- Leyenda de colores -->
                         <div class="leyenda-calendario">
-                            <span class="leyenda-label">Estado (borde):</span>
-                            <span class="leyenda-item"><span class="leyenda-dot-borde" style="border-color:#ffc107"></span> Pendiente</span>
-                            <span class="leyenda-item"><span class="leyenda-dot-borde" style="border-color:#28a745"></span> Confirmada</span>
-                            <span class="leyenda-item"><span class="leyenda-dot-borde" style="border-color:#6f42c1"></span> Atendida</span>
-                            <span class="leyenda-item"><span class="leyenda-dot-borde" style="border-color:#dc3545"></span> Cancelada</span>
+                            <span class="leyenda-label">Estado (relleno):</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#ffc107"></span> Pendiente</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#28a745"></span> Confirmada</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#6f42c1"></span> Atendida</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#dc3545"></span> Cancelada</span>
                         </div>
                         <div class="leyenda-calendario">
-                            <span class="leyenda-label">Tipo de consulta (color):</span>
+                            <span class="leyenda-label">Tipo de consulta (franja izquierda):</span>
                             <?php foreach ($tiposConsultaActivos as $tc): ?>
-                                <span class="leyenda-item"><span class="leyenda-dot" style="background:<?php echo htmlspecialchars($tc['color']); ?>"></span> <?php echo htmlspecialchars($tc['nombre']); ?></span>
+                                <span class="leyenda-item"><span class="leyenda-franja" style="border-left-color:<?php echo htmlspecialchars($tc['color']); ?>"></span> <?php echo htmlspecialchars($tc['nombre']); ?></span>
                             <?php endforeach; ?>
                         </div>
                         <div class="cv-toolbar d-flex align-items-center gap-2 mb-2">
@@ -824,7 +832,7 @@ function renderVistaPorDoctor() {
         div.style.width  = (CV_COL_WIDTH - 4) + 'px';
         div.style.height = height + 'px';
         div.style.background  = ev.backgroundColor;
-        div.style.borderLeft  = '4px solid ' + (ev.borderColor || '#333');
+        div.style.borderLeft  = '5px solid ' + (ev.borderColor || '#333');
         div.innerHTML = `<b>${inicio.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</b>${cvEscapeHtml(ev.title)}`;
         div.addEventListener('click', function () {
             abrirModalCita(ev.id, ev.title, inicio, ev.extendedProps);
