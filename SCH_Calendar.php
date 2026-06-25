@@ -42,13 +42,17 @@ $eventos   = array();
 
 while ($row = $resultado->fetch_assoc()) {
     switch($row['ESTADO_CITA']) {
-        case 'Confirmada': $colorEstado = '#28a745'; break; // Verde
-        case 'Pendiente':  $colorEstado = '#ffc107'; break; // Amarillo
-        case 'A':          $colorEstado = '#6f42c1'; break; // Morado - Atendida
+        case 'Pendiente':
+        case 'Reagendada':              $colorEstado = '#212529'; break; // Negro  - Pendiente / Reagendada
+        case 'Confirmada':              $colorEstado = '#6f42c1'; break; // Morado - Confirmada
+        case 'A':                       $colorEstado = '#28a745'; break; // Verde  - Atendida
         case 'Cancelada':
-        case 'Cancelado':
-        case 'Atrasado':   $colorEstado = '#dc3545'; break; // Rojo
-        default:           $colorEstado = '#007bff'; break; // Azul
+        case 'Cancelado':               $colorEstado = '#fd7e14'; break; // Naranja - Cancelada
+        case 'Atrasado':
+        case 'Cancelación Tardía':      $colorEstado = '#ffc107'; break; // Ámbar  - Cancelación tardía
+        case 'Cancelado por Profesional': $colorEstado = '#ff8a80'; break; // Salmón - Cancelado por el profesional
+        case 'No Asistió':              $colorEstado = '#dc3545'; break; // Rojo   - No asistió
+        default:                        $colorEstado = '#007bff'; break; // Azul
     }
 
     $colorTipo = !empty($row['TIPO_COLOR']) ? $row['TIPO_COLOR'] : $colorTipoDefault;
@@ -266,10 +270,13 @@ while ($d = $resultDoctores->fetch_assoc()) {
                         <!-- Leyenda de colores -->
                         <div class="leyenda-calendario">
                             <span class="leyenda-label">Estado (relleno):</span>
-                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#ffc107"></span> Pendiente</span>
-                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#28a745"></span> Confirmada</span>
-                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#6f42c1"></span> Atendida</span>
-                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#dc3545"></span> Cancelada</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#212529"></span> Pendiente/Reagendada</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#6f42c1"></span> Confirmada</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#28a745"></span> Atendida</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#fd7e14"></span> Cancelada</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#ffc107"></span> Cancelación Tardía</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#ff8a80"></span> Cancelado por Profesional</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#dc3545"></span> No Asistió</span>
                         </div>
                         <div class="leyenda-calendario">
                             <span class="leyenda-label">Tipo de consulta (franja izquierda):</span>
@@ -286,10 +293,13 @@ while ($d = $resultDoctores->fetch_assoc()) {
                         <!-- Leyenda de colores -->
                         <div class="leyenda-calendario">
                             <span class="leyenda-label">Estado (relleno):</span>
-                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#ffc107"></span> Pendiente</span>
-                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#28a745"></span> Confirmada</span>
-                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#6f42c1"></span> Atendida</span>
-                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#dc3545"></span> Cancelada</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#212529"></span> Pendiente/Reagendada</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#6f42c1"></span> Confirmada</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#28a745"></span> Atendida</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#fd7e14"></span> Cancelada</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#ffc107"></span> Cancelación Tardía</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#ff8a80"></span> Cancelado por Profesional</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#dc3545"></span> No Asistió</span>
                         </div>
                         <div class="leyenda-calendario">
                             <span class="leyenda-label">Tipo de consulta (franja izquierda):</span>
@@ -446,6 +456,17 @@ while ($d = $resultDoctores->fetch_assoc()) {
                     <button id="btnCancelar" class="btn btn-danger" type="submit" onclick="setEstado('Cancelada')">
                         <i class="bi bi-x-circle"></i> Cancelar
                     </button>
+                    <div id="btnMasEstados" class="btn-group">
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                            Otro estado
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><button class="dropdown-item" type="submit" onclick="setEstado('Reagendada')">Reagendada</button></li>
+                            <li><button class="dropdown-item" type="submit" onclick="setEstado('Cancelación Tardía')">Cancelación Tardía</button></li>
+                            <li><button class="dropdown-item" type="submit" onclick="setEstado('Cancelado por Profesional')">Cancelado por Profesional</button></li>
+                            <li><button class="dropdown-item" type="submit" onclick="setEstado('No Asistió')">No Asistió</button></li>
+                        </ul>
+                    </div>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </form>
@@ -464,15 +485,19 @@ while ($d = $resultDoctores->fetch_assoc()) {
 // ── Helpers ──────────────────────────────────────────────────────────
 function estadoBadge(estado) {
     const map = {
-        'Confirmada': ['bg-success',          'Confirmada'],
-        'Pendiente':  ['bg-warning text-dark', 'Pendiente'],
-        'A':          ['bg-purple',            'Atendida'],
-        'Cancelada':  ['bg-danger',            'Cancelada'],
-        'Cancelado':  ['bg-danger',            'Cancelado'],
-        'Atrasado':   ['bg-danger',            'Atrasado'],
+        'Pendiente':                   ['#212529', 'Pendiente'],
+        'Reagendada':                  ['#212529', 'Reagendada'],
+        'Confirmada':                  ['#6f42c1', 'Confirmada'],
+        'A':                           ['#28a745', 'Atendida'],
+        'Cancelada':                   ['#fd7e14', 'Cancelada'],
+        'Cancelado':                   ['#fd7e14', 'Cancelado'],
+        'Atrasado':                    ['#ffc107', 'Atrasado'],
+        'Cancelación Tardía':          ['#ffc107', 'Cancelación Tardía'],
+        'Cancelado por Profesional':   ['#ff8a80', 'Cancelado por Profesional'],
+        'No Asistió':                  ['#dc3545', 'No Asistió'],
     };
-    const [cls, label] = map[estado] || ['bg-secondary', estado];
-    return `<span class="badge ${cls}" style="${cls==='bg-purple'?'background:#6f42c1':''}">${label}</span>`;
+    const [color, label] = map[estado] || ['#6c757d', estado];
+    return `<span class="badge" style="background:${color}">${label}</span>`;
 }
 
 function setEstado(estado) {
@@ -555,9 +580,12 @@ const eventosAll      = <?php echo json_encode($eventos); ?>;
 const doctoresActivos = <?php echo json_encode($doctoresActivos); ?>;
 
 // ── Modal de gestión de cita (usado por ambas vistas) ──────────────────
+const ESTADOS_CERRADOS = ['A', 'Cancelada', 'Cancelado', 'Cancelación Tardía', 'Cancelado por Profesional', 'No Asistió'];
+
 function abrirModalCita(id, title, startDate, p) {
     const est      = p.cita || 'Pendiente';
     const atendida = est === 'A';
+    const cerrada  = ESTADOS_CERRADOS.includes(est);
 
     // Limpiar y formatear teléfono para WhatsApp
     let tel = p.telefono ? p.telefono.replace(/\D/g, '') : '';
@@ -598,27 +626,34 @@ function abrirModalCita(id, title, startDate, p) {
     document.getElementById('idCita').value     = id;
     document.getElementById('estadoCita').value = est;
 
-    const btnAtender   = document.getElementById('btnAtender');
-    const btnHistorial = document.getElementById('btnHistorial');
-    const btnReagendar = document.getElementById('btnReagendar');
-    const btnConfirmar = document.getElementById('btnConfirmar');
-    const btnCancelar  = document.getElementById('btnCancelar');
+    const btnAtender     = document.getElementById('btnAtender');
+    const btnHistorial   = document.getElementById('btnHistorial');
+    const btnReagendar    = document.getElementById('btnReagendar');
+    const btnConfirmar   = document.getElementById('btnConfirmar');
+    const btnCancelar    = document.getElementById('btnCancelar');
+    const btnMasEstados  = document.getElementById('btnMasEstados');
 
     // Cerrar panel reagendar al abrir una nueva cita
     cerrarReagendar();
 
-    if (atendida) {
+    if (cerrada) {
         btnAtender.classList.add('d-none');
         btnReagendar.classList.add('d-none');
         btnConfirmar.classList.add('d-none');
         btnCancelar.classList.add('d-none');
-        btnHistorial.href = `historial_atenciones.php?q=${encodeURIComponent(title)}`;
-        btnHistorial.classList.remove('d-none');
+        btnMasEstados.classList.add('d-none');
     } else {
         btnAtender.classList.remove('d-none');
         btnReagendar.classList.remove('d-none');
         btnConfirmar.classList.remove('d-none');
         btnCancelar.classList.remove('d-none');
+        btnMasEstados.classList.remove('d-none');
+    }
+
+    if (atendida) {
+        btnHistorial.href = `historial_atenciones.php?q=${encodeURIComponent(title)}`;
+        btnHistorial.classList.remove('d-none');
+    } else {
         btnHistorial.classList.add('d-none');
     }
 
