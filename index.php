@@ -1,13 +1,14 @@
 <?php
 ob_start();
 session_start();
+require_once("class/i18n.php");
 if (isset($_SESSION["loggedin"])) {
     header("Location: Home.php");
     exit();
 }
 ?>
 <!DOCTYPE html>
-<html lang="es">
+<html lang="<?php echo idiomaActual(); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -170,30 +171,34 @@ if (isset($_SESSION["loggedin"])) {
 </head>
 <body>
 
+<div style="position:fixed; top:16px; right:18px; z-index:1050;">
+    <?php include("lang_toggle.php"); ?>
+</div>
+
 <div class="login-card">
 
     <!-- ── FORMULARIO ───────────────────────────────── -->
     <div class="login-form-panel">
-        <h2>Bienvenido</h2>
-        <p class="subtitle">Ingresa tus credenciales para continuar</p>
+        <h2><?php echo t('Bienvenido'); ?></h2>
+        <p class="subtitle"><?php echo t('Ingresa tus credenciales para continuar'); ?></p>
 
         <form action="class/checkLogin.php" method="post">
 
             <div class="input-group">
                 <span class="icon"><i class="fa fa-user"></i></span>
-                <input type="text" name="user" placeholder="Usuario" required autofocus>
+                <input type="text" name="user" placeholder="<?php echo t('Usuario'); ?>" required autofocus>
             </div>
 
             <div class="input-group">
                 <span class="icon"><i class="fa fa-lock"></i></span>
-                <input type="password" name="password" placeholder="Contraseña" required>
+                <input type="password" name="password" placeholder="<?php echo t('Contraseña'); ?>" required>
             </div>
 
             <div class="login-extras">
-                <a href="#">¿Olvidaste tu contraseña?</a>
+                <a href="#"><?php echo t('¿Olvidaste tu contraseña?'); ?></a>
             </div>
 
-            <button type="submit" class="btn-login">Iniciar Sesión</button>
+            <button type="submit" class="btn-login"><?php echo t('Iniciar Sesión'); ?></button>
 
         </form>
     </div>

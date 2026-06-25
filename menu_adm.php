@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/class/i18n.php';
 $rol       = $_SESSION['rol'] ?? '';
 $esSistema = ($rol === 'SISTEMA');
 $esDoctor  = ($rol === 'DOCTOR');
@@ -54,70 +55,70 @@ function menuActivo($paginas, $actual) {
         <ul class="vertical-nav-menu">
 
             <!-- ══ DASHBOARD ══════════════════════════════════════════ -->
-            <li class="app-sidebar__heading">Dashboard</li>
+            <li class="app-sidebar__heading"><?php echo t('Dashboard'); ?></li>
             <li>
                 <a href="home.php" class="<?php echo menuActivo('home.php', $paginaActual); ?>">
-                    <i class="metismenu-icon pe-7s-rocket"></i> General
+                    <i class="metismenu-icon pe-7s-rocket"></i> <?php echo t('General'); ?>
                 </a>
             </li>
 
             <!-- ══ AGENDA ══════════════════════════════════════════════ -->
-            <li class="app-sidebar__heading">Agenda</li>
+            <li class="app-sidebar__heading"><?php echo t('Agenda'); ?></li>
             <li>
                 <a href="SCH_Calendar.php" class="<?php echo menuActivo('SCH_Calendar.php', $paginaActual); ?>">
-                    <i class="metismenu-icon pe-7s-display2"></i> Calendario
+                    <i class="metismenu-icon pe-7s-display2"></i> <?php echo t('Calendario'); ?>
                 </a>
             </li>
             <li>
                 <a href="Agenda_Pendientes.php" class="<?php echo menuActivo('Agenda_Pendientes.php', $paginaActual); ?>">
-                    <i class="metismenu-icon pe-7s-date"></i> Pendientes
+                    <i class="metismenu-icon pe-7s-date"></i> <?php echo t('Pendientes'); ?>
                 </a>
             </li>
             <?php if ($esSistema || $esDoctor): ?>
             <li>
                 <a href="historial_atenciones.php" class="<?php echo menuActivo('historial_atenciones.php', $paginaActual); ?>">
-                    <i class="metismenu-icon pe-7s-date"></i> Atendidas
+                    <i class="metismenu-icon pe-7s-date"></i> <?php echo t('Atendidas'); ?>
                 </a>
             </li>
             <?php endif; ?>
             <?php if ($esSistema): ?>
             <li>
                 <a href="VTA_Concretado.php" class="<?php echo menuActivo('VTA_Concretado.php', $paginaActual); ?>">
-                    <i class="metismenu-icon pe-7s-diamond"></i> Canceladas
+                    <i class="metismenu-icon pe-7s-diamond"></i> <?php echo t('Canceladas'); ?>
                 </a>
             </li>
             <?php endif; ?>
             <?php if ($esSistema || $esDoctor): ?>
             <li>
                 <a href="Enviar_Notificacion.php" class="<?php echo menuActivo('Enviar_Notificacion.php', $paginaActual); ?>">
-                    <i class="metismenu-icon pe-7s-mail"></i> Enviar Notificación
+                    <i class="metismenu-icon pe-7s-mail"></i> <?php echo t('Enviar Notificación'); ?>
                 </a>
             </li>
             <?php endif; ?>
 
             <!-- ══ PACIENTES ═══════════════════════════════════════════ -->
-            <li class="app-sidebar__heading">Pacientes</li>
+            <li class="app-sidebar__heading"><?php echo t('Pacientes'); ?></li>
             <li>
                 <a href="#">
                     <i class="metismenu-icon pe-7s-add-user"></i>
-                    Pacientes
+                    <?php echo t('Pacientes'); ?>
                     <i class="metismenu-state-icon pe-7s-angle-down caret-left"></i>
                 </a>
                 <ul>
                     <li>
                         <a href="listado_pacientes.php" class="<?php echo menuActivo('listado_pacientes.php', $paginaActual); ?>">
-                            <i class="metismenu-icon"></i> Listado de Pacientes
+                            <i class="metismenu-icon"></i> <?php echo t('Listado de Pacientes'); ?>
                         </a>
                     </li>
                     <li>
                         <a href="PNC_PacienteCrear.php">
-                            <i class="metismenu-icon"></i> Crear Paciente
+                            <i class="metismenu-icon"></i> <?php echo t('Crear Paciente'); ?>
                         </a>
                     </li>
                     <?php if ($esSistema || $esDoctor): ?>
                     <li>
                         <a href="visor_plantillas.php">
-                            <i class="metismenu-icon"></i> Listado Plantillas
+                            <i class="metismenu-icon"></i> <?php echo t('Listado Plantillas'); ?>
                         </a>
                     </li>
                     <?php endif; ?>
@@ -129,13 +130,13 @@ function menuActivo($paginas, $actual) {
             <li>
                 <a href="#">
                     <i class="metismenu-icon pe-7s-users"></i>
-                    Doctor
+                    <?php echo t('Doctor'); ?>
                     <i class="metismenu-state-icon pe-7s-angle-down caret-left"></i>
                 </a>
                 <ul>
                     <li>
                         <a href="PNC_DoctorCrear.php">
-                            <i class="metismenu-icon"></i> Crear Nuevo
+                            <i class="metismenu-icon"></i> <?php echo t('Crear Nuevo'); ?>
                         </a>
                     </li>
                 </ul>
@@ -143,47 +144,47 @@ function menuActivo($paginas, $actual) {
             <li>
                 <a href="#">
                     <i class="metismenu-icon pe-7s-note2"></i>
-                    Código CIE-10
+                    <?php echo t('Código CIE-10'); ?>
                     <i class="metismenu-state-icon pe-7s-angle-down caret-left"></i>
                 </a>
                 <ul>
                     <li>
                         <a href="PNC_CIE-10Crear.php">
-                            <i class="metismenu-icon"></i> Crear Nuevo CIE-10
+                            <i class="metismenu-icon"></i> <?php echo t('Crear Nuevo CIE-10'); ?>
                         </a>
                     </li>
                 </ul>
             </li>
             <li>
                 <a href="gestionar_tipos_consulta.php" class="<?php echo menuActivo('gestionar_tipos_consulta.php', $paginaActual); ?>">
-                    <i class="metismenu-icon pe-7s-palette"></i> Tipos de Consulta
+                    <i class="metismenu-icon pe-7s-palette"></i> <?php echo t('Tipos de Consulta'); ?>
                 </a>
             </li>
             <?php endif; ?>
 
             <!-- ══ BILLS (solo SISTEMA) ════════════════════════════════ -->
             <?php if ($esSistema): ?>
-            <li class="app-sidebar__heading">Bills</li>
+            <li class="app-sidebar__heading"><?php echo t('Bills'); ?></li>
             <li>
                 <a href="#">
                     <i class="metismenu-icon pe-7s-news-paper"></i>
-                    Registrar
+                    <?php echo t('Registrar'); ?>
                     <i class="metismenu-state-icon pe-7s-angle-down caret-left"></i>
                 </a>
                 <ul>
                     <li>
                         <a href="BILLS_FacturaCrear.php">
-                            <i class="metismenu-icon"></i> Registrar Bills
+                            <i class="metismenu-icon"></i> <?php echo t('Registrar Bills'); ?>
                         </a>
                     </li>
                     <li>
                         <a href="BILLS_FacturaAbonos.php">
-                            <i class="metismenu-icon"></i> Registrar Abonos
+                            <i class="metismenu-icon"></i> <?php echo t('Registrar Abonos'); ?>
                         </a>
                     </li>
                     <li>
                         <a href="DashBoardReportesCuentasPorCobrar.php">
-                            <i class="metismenu-icon"></i> Reportes
+                            <i class="metismenu-icon"></i> <?php echo t('Reportes'); ?>
                         </a>
                     </li>
                 </ul>
@@ -191,45 +192,45 @@ function menuActivo($paginas, $actual) {
             <?php endif; ?>
 
             <!-- ══ REPORTES ════════════════════════════════════════════ -->
-            <li class="app-sidebar__heading">Reportes</li>
+            <li class="app-sidebar__heading"><?php echo t('Reportes'); ?></li>
             <li>
                 <a href="RPT_Vendedor_Vta.php" class="<?php echo menuActivo('RPT_Vendedor_Vta.php', $paginaActual); ?>">
-                    <i class="metismenu-icon pe-7s-monitor"></i> Mis Citas
+                    <i class="metismenu-icon pe-7s-monitor"></i> <?php echo t('Mis Citas'); ?>
                 </a>
             </li>
             <?php if ($esSistema || $esDoctor): ?>
             <li>
                 <a href="visor_plantillas.php" class="<?php echo menuActivo('visor_plantillas.php', $paginaActual); ?>">
-                    <i class="metismenu-icon pe-7s-note2"></i> Plantillas
+                    <i class="metismenu-icon pe-7s-note2"></i> <?php echo t('Plantillas'); ?>
                 </a>
             </li>
             <?php endif; ?>
             <?php if ($esSistema): ?>
             <li>
                 <a href="RPT_General_vta.php" class="<?php echo menuActivo('RPT_General_vta.php', $paginaActual); ?>">
-                    <i class="metismenu-icon pe-7s-graph"></i> Citas Generales
+                    <i class="metismenu-icon pe-7s-graph"></i> <?php echo t('Citas Generales'); ?>
                 </a>
             </li>
             <?php endif; ?>
 
             <!-- ══ PANEL DE CONTROL (solo SISTEMA) ═══════════════════ -->
             <?php if ($esSistema): ?>
-            <li class="app-sidebar__heading">Panel de Control</li>
+            <li class="app-sidebar__heading"><?php echo t('Panel de Control'); ?></li>
             <li>
                 <a href="#">
                     <i class="metismenu-icon pe-7s-users"></i>
-                    Usuarios
+                    <?php echo t('Usuarios'); ?>
                     <i class="metismenu-state-icon pe-7s-angle-down caret-left"></i>
                 </a>
                 <ul>
                     <li>
                         <a href="PNC_UsuarioCrear.php">
-                            <i class="metismenu-icon"></i> Crear Nuevo
+                            <i class="metismenu-icon"></i> <?php echo t('Crear Nuevo'); ?>
                         </a>
                     </li>
                     <li>
                         <a href="PNC_UsuarioListado.php">
-                            <i class="metismenu-icon"></i> Listado
+                            <i class="metismenu-icon"></i> <?php echo t('Listado'); ?>
                         </a>
                     </li>
                 </ul>
@@ -243,6 +244,6 @@ function menuActivo($paginas, $actual) {
 <!-- ══ CERRAR SESIÓN — fijo al pie, siempre visible sin necesidad de scroll ══ -->
 <div class="sidebar-logout-footer">
     <a href="salir.php">
-        <i class="metismenu-icon pe-7s-power"></i> Cerrar Sesión
+        <i class="metismenu-icon pe-7s-power"></i> <?php echo t('Cerrar Sesión'); ?>
     </a>
 </div>

@@ -3,6 +3,7 @@ ob_start();
 session_start();
 require_once("class/funciones.php");
 require_once("class/conexionBD.php");
+require_once("class/i18n.php");
 $conexion = conectarse();
 
 if(!isset($_SESSION["rol"])){
@@ -191,12 +192,12 @@ while ($d = $resultDoctores->fetch_assoc()) {
                 <ul class="header-menu nav">
                     <li class="nav-item">
                         <a href="javascript:void(0);" class="nav-link">
-                            <i class="nav-link-icon fa fa-database"></i> Estadistica
+                            <i class="nav-link-icon fa fa-database"></i> <?php echo t('Estadistica'); ?>
                         </a>
                     </li>
                     <li class="dropdown nav-item">
                         <a href="javascript:void(0);" class="nav-link">
-                            <i class="nav-link-icon fa fa-cog"></i> Configuracion
+                            <i class="nav-link-icon fa fa-cog"></i> <?php echo t('Configuracion'); ?>
                         </a>
                     </li>
                 </ul>
@@ -212,10 +213,10 @@ while ($d = $resultDoctores->fetch_assoc()) {
                                         <i class="fa fa-angle-down ml-2 opacity-8"></i>
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-right">
-                                        <button type="button" class="dropdown-item">Perfil de Usuario</button>
-                                        <button type="button" class="dropdown-item">Configuración</button>
+                                        <button type="button" class="dropdown-item"><?php echo t('Perfil de Usuario'); ?></button>
+                                        <button type="button" class="dropdown-item"><?php echo t('Configuración'); ?></button>
                                         <div class="dropdown-divider"></div>
-                                        <a href="salir.php" class="dropdown-item">Cerrar Sesión</a>
+                                        <a href="salir.php" class="dropdown-item"><?php echo t('Cerrar Sesión'); ?></a>
                                     </div>
                                 </div>
                             </div>
@@ -226,6 +227,9 @@ while ($d = $resultDoctores->fetch_assoc()) {
                                 <div class="widget-subheading">
                                     <?php echo htmlspecialchars($_SESSION["rol"] ?? 'Usuario'); ?> — <?php echo date('d/m/Y'); ?>
                                 </div>
+                            </div>
+                            <div class="widget-content-left ml-3">
+                                <?php include("lang_toggle.php"); ?>
                             </div>
                         </div>
                     </div>
@@ -308,7 +312,7 @@ while ($d = $resultDoctores->fetch_assoc()) {
                             <?php endforeach; ?>
                         </div>
                         <div class="cv-toolbar d-flex align-items-center gap-2 mb-2">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="cvToday">Hoy</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="cvToday"><?php echo t('Hoy'); ?></button>
                             <button type="button" class="btn btn-sm btn-outline-secondary" id="cvPrev"><i class="bi bi-chevron-left"></i></button>
                             <button type="button" class="btn btn-sm btn-outline-secondary" id="cvNext"><i class="bi bi-chevron-right"></i></button>
                             <strong id="cvRangeLabel" class="ms-2"></strong>
@@ -317,7 +321,7 @@ while ($d = $resultDoctores->fetch_assoc()) {
                             <div id="cvGrid" class="cv-grid"></div>
                         </div>
                         <div class="cv-doctores mt-3" id="cvDoctorFiltros">
-                            <span class="fw-semibold me-2">Doctores:</span>
+                            <span class="fw-semibold me-2"><?php echo t('Doctores'); ?>:</span>
                         </div>
                     </div>
                 </div>
@@ -331,20 +335,20 @@ while ($d = $resultDoctores->fetch_assoc()) {
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Agendar Cita</h5>
+                <h5 class="modal-title"><?php echo t('Agendar Cita'); ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="insertCita" method="POST" action="class/Insert_cita.php">
                     <div class="mb-3">
-                        <label class="form-label">Fecha Consulta</label>
+                        <label class="form-label"><?php echo t('Fecha Consulta'); ?></label>
                         <input type="date" class="form-control" name="fechafactura" id="fechafactura">
                         <script>document.getElementById('fechafactura').value = new Date().toISOString().substring(0, 10);</script>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Paciente</label>
+                        <label class="form-label"><?php echo t('Paciente'); ?></label>
                         <select class="form-select select-busqueda" name="IdPaciente" required>
-                            <option value="">Buscar paciente...</option>
+                            <option value=""><?php echo t('Buscar paciente...'); ?></option>
                             <?php
                             $queryP = $conexion->query("SELECT IDPACIENTE, NOMBRES, APELLIDOS FROM AG_PACIENTE WHERE ESTADO = 'A' ORDER BY NOMBRES");
                             while ($v = $queryP->fetch_assoc()):
@@ -354,11 +358,11 @@ while ($d = $resultDoctores->fetch_assoc()) {
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Hora Inicio</label>
+                        <label class="form-label"><?php echo t('Hora Inicio'); ?></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-clock"></i></span>
                             <select class="form-select select-busqueda" name="timeIni" id="timeIni" required>
-                                <option value="">Seleccione hora...</option>
+                                <option value=""><?php echo t('Seleccione hora...'); ?></option>
                                 <?php
                                 $inicio    = new DateTime('07:00');
                                 $fin       = new DateTime('22:30');
@@ -372,9 +376,9 @@ while ($d = $resultDoctores->fetch_assoc()) {
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Tipo Consulta</label>
+                        <label class="form-label"><?php echo t('Tipo Consulta'); ?></label>
                         <select class="form-select select-busqueda" name="Idconsulta" required>
-                            <option value="">Buscar tipo consulta...</option>
+                            <option value=""><?php echo t('Buscar tipo consulta...'); ?></option>
                             <?php
                             $queryC = $conexion->query("SELECT IDTIPOCONSULTA, NOMBRES FROM AG_TIPOCONSULTA WHERE ESTADO = 'A' ORDER BY NOMBRES");
                             while ($v = $queryC->fetch_assoc()):
@@ -384,18 +388,18 @@ while ($d = $resultDoctores->fetch_assoc()) {
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Doctor</label>
+                        <label class="form-label"><?php echo t('Doctor'); ?></label>
                         <select class="form-select select-busqueda" name="IdDoctor" required>
-                            <option value="">Buscar doctor...</option>
+                            <option value=""><?php echo t('Buscar doctor...'); ?></option>
                             <?php foreach ($doctoresActivos as $v): ?>
                             <option value="<?php echo $v['id']; ?>"><?php echo htmlspecialchars($v['nombre']); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Location</label>
+                        <label class="form-label"><?php echo t('Location'); ?></label>
                         <select class="form-select select-busqueda" name="IdAgencia" required>
-                            <option value="">Seleccione location...</option>
+                            <option value=""><?php echo t('Seleccione location...'); ?></option>
                             <?php
                             $queryAg = $conexion->query("SELECT IDAGENCIA, DESCRIPCION FROM ADM_AGENCIA WHERE ESTADO = 1 ORDER BY DESCRIPCION");
                             while ($v = $queryAg->fetch_assoc()):
@@ -405,7 +409,7 @@ while ($d = $resultDoctores->fetch_assoc()) {
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-calendar-check"></i> Agendar
+                        <i class="bi bi-calendar-check"></i> <?php echo t('Agendar'); ?>
                     </button>
                 </form>
             </div>
@@ -418,7 +422,7 @@ while ($d = $resultDoctores->fetch_assoc()) {
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Gestión de Cita</h5>
+                <h5 class="modal-title"><?php echo t('Gestión de Cita'); ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="formEstado" method="POST" action="class/actualizar_estado.php" onsubmit="return validarFormulario();">

@@ -3,6 +3,7 @@ ob_start();
 session_start();
 require_once("class/funciones.php");
 require_once("class/conexionBD.php");
+require_once("class/i18n.php");
 $conexion = conectarse();
 
 if (!isset($_SESSION["rol"])) {
@@ -167,9 +168,12 @@ for ($i = 6; $i >= 0; $i--) {
                                         <i class="fa fa-angle-down ml-2 opacity-8"></i>
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-right">
-                                        <a href="salir.php" class="dropdown-item">Cerrar Sesión</a>
+                                        <a href="salir.php" class="dropdown-item"><?php echo t('Cerrar Sesión'); ?></a>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="widget-content-left ms-3">
+                                <?php include("lang_toggle.php"); ?>
                             </div>
                         </div>
                     </div>
@@ -195,10 +199,10 @@ for ($i = 6; $i >= 0; $i--) {
                                 <i class="pe-7s-rocket icon-gradient bg-warm-flame"></i>
                             </div>
                             <div>
-                                Bienvenido, <?php echo htmlspecialchars($nombres); ?>
+                                <?php echo t('Bienvenido'); ?>, <?php echo htmlspecialchars($nombres); ?>
                                 <div class="page-title-subheading">
                                     <?php echo date('l, d \d\e F \d\e Y'); ?> &nbsp;·&nbsp;
-                                    Resumen general del sistema
+                                    <?php echo t('Resumen general del sistema'); ?>
                                 </div>
                             </div>
                         </div>
@@ -214,7 +218,7 @@ for ($i = 6; $i >= 0; $i--) {
                                 <div class="icon"><i class="bi bi-calendar-day"></i></div>
                                 <div class="flex-grow-1">
                                     <div class="number"><?php echo $citasHoy; ?></div>
-                                    <div class="label">Citas hoy</div>
+                                    <div class="label"><?php echo t('Citas hoy'); ?></div>
                                 </div>
                                 <a href="SCH_Calendar.php" class="text-white link ms-auto" style="font-size:.8rem;" title="Ver calendario">
                                     <i class="bi bi-arrow-right-circle"></i>
@@ -229,7 +233,7 @@ for ($i = 6; $i >= 0; $i--) {
                                 <div class="icon"><i class="bi bi-hourglass-split"></i></div>
                                 <div class="flex-grow-1">
                                     <div class="number"><?php echo $citasPendientes; ?></div>
-                                    <div class="label">Pendientes</div>
+                                    <div class="label"><?php echo t('Pendientes'); ?></div>
                                 </div>
                                 <a href="Agenda_Pendientes.php" class="text-white link ms-auto" style="font-size:.8rem;" title="Ver pendientes">
                                     <i class="bi bi-arrow-right-circle"></i>
@@ -244,7 +248,7 @@ for ($i = 6; $i >= 0; $i--) {
                                 <div class="icon"><i class="bi bi-clipboard2-pulse"></i></div>
                                 <div class="flex-grow-1">
                                     <div class="number"><?php echo $citasAtendidas; ?></div>
-                                    <div class="label">Atendidas (mes)</div>
+                                    <div class="label"><?php echo t('Atendidas (mes)'); ?></div>
                                 </div>
                                 <a href="historial_atenciones.php" class="text-white link ms-auto" style="font-size:.8rem;" title="Ver historial">
                                     <i class="bi bi-arrow-right-circle"></i>
@@ -259,7 +263,7 @@ for ($i = 6; $i >= 0; $i--) {
                                 <div class="icon"><i class="bi bi-people-fill"></i></div>
                                 <div class="flex-grow-1">
                                     <div class="number"><?php echo $totalPacientes; ?></div>
-                                    <div class="label">Pacientes</div>
+                                    <div class="label"><?php echo t('Pacientes'); ?></div>
                                 </div>
                                 <a href="PNC_PacienteCrear.php" class="text-white link ms-auto" style="font-size:.8rem;" title="Nuevo paciente">
                                     <i class="bi bi-arrow-right-circle"></i>
@@ -277,7 +281,7 @@ for ($i = 6; $i >= 0; $i--) {
                     <div class="col-md-5">
                         <div class="card shadow-sm">
                             <div class="card-body">
-                                <p class="section-title"><i class="bi bi-bar-chart-line me-1"></i>Citas — últimos 7 días</p>
+                                <p class="section-title"><i class="bi bi-bar-chart-line me-1"></i><?php echo t('Citas — últimos 7 días'); ?></p>
                                 <canvas id="chartSemana" height="180"></canvas>
                             </div>
                         </div>
@@ -287,22 +291,22 @@ for ($i = 6; $i >= 0; $i--) {
                     <div class="col-md-3">
                         <div class="card shadow-sm">
                             <div class="card-body">
-                                <p class="section-title"><i class="bi bi-pie-chart me-1"></i>Este mes</p>
+                                <p class="section-title"><i class="bi bi-pie-chart me-1"></i><?php echo t('Este mes'); ?></p>
                                 <ul class="list-group list-group-flush">
                                     <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                        <span><span class="badge bg-success me-1">●</span> Confirmadas</span>
+                                        <span><span class="badge bg-success me-1">●</span> <?php echo t('Confirmadas'); ?></span>
                                         <span class="fw-bold"><?php echo $citasConfirmadas; ?></span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                        <span><span class="badge bg-warning text-dark me-1">●</span> Pendientes</span>
+                                        <span><span class="badge bg-warning text-dark me-1">●</span> <?php echo t('Pendientes'); ?></span>
                                         <span class="fw-bold"><?php echo $citasPendientes; ?></span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                        <span><span class="badge me-1" style="background:#6f42c1;">●</span> Atendidas</span>
+                                        <span><span class="badge me-1" style="background:#6f42c1;">●</span> <?php echo t('Atendidas'); ?></span>
                                         <span class="fw-bold"><?php echo $citasAtendidas; ?></span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                        <span><span class="badge bg-danger me-1">●</span> Canceladas</span>
+                                        <span><span class="badge bg-danger me-1">●</span> <?php echo t('Canceladas'); ?></span>
                                         <span class="fw-bold"><?php echo $citasCanceladas; ?></span>
                                     </li>
                                 </ul>
@@ -314,7 +318,7 @@ for ($i = 6; $i >= 0; $i--) {
                     <div class="col-md-4">
                         <div class="card shadow-sm">
                             <div class="card-body">
-                                <p class="section-title"><i class="bi bi-clock-history me-1"></i>Últimas atenciones</p>
+                                <p class="section-title"><i class="bi bi-clock-history me-1"></i><?php echo t('Últimas atenciones'); ?></p>
                                 <ul class="list-group list-group-flush">
                                     <?php if ($resUlt && $resUlt->num_rows > 0): ?>
                                         <?php while ($u = $resUlt->fetch_assoc()): ?>
@@ -331,7 +335,7 @@ for ($i = 6; $i >= 0; $i--) {
                                         </li>
                                         <?php endwhile; ?>
                                     <?php else: ?>
-                                        <li class="list-group-item px-0 text-muted" style="font-size:.85rem;">Sin atenciones registradas.</li>
+                                        <li class="list-group-item px-0 text-muted" style="font-size:.85rem;"><?php echo t('Sin atenciones registradas.'); ?></li>
                                     <?php endif; ?>
                                 </ul>
                             </div>
@@ -349,10 +353,10 @@ for ($i = 6; $i >= 0; $i--) {
                             <div class="card-header d-flex justify-content-between align-items-center py-2">
                                 <span class="section-title mb-0">
                                     <i class="bi bi-calendar-check me-1"></i>
-                                    Citas de hoy — <?php echo date('d/m/Y'); ?>
+                                    <?php echo t('Citas de hoy'); ?> — <?php echo date('d/m/Y'); ?>
                                 </span>
                                 <a href="SCH_Calendar.php" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-calendar3"></i> Ir al calendario
+                                    <i class="bi bi-calendar3"></i> <?php echo t('Ir al calendario'); ?>
                                 </a>
                             </div>
                             <div class="card-body p-0">
@@ -361,11 +365,11 @@ for ($i = 6; $i >= 0; $i--) {
                                     <table class="table table-hover align-middle mb-0">
                                         <thead class="table-light">
                                             <tr>
-                                                <th>Hora</th>
-                                                <th>Paciente</th>
-                                                <th>Tipo</th>
-                                                <th>Doctor</th>
-                                                <th>Estado</th>
+                                                <th><?php echo t('Hora'); ?></th>
+                                                <th><?php echo t('Paciente'); ?></th>
+                                                <th><?php echo t('Tipo'); ?></th>
+                                                <th><?php echo t('Doctor'); ?></th>
+                                                <th><?php echo t('Estado'); ?></th>
                                                 <th></th>
                                             </tr>
                                         </thead>
@@ -412,7 +416,7 @@ for ($i = 6; $i >= 0; $i--) {
                                 <?php else: ?>
                                     <div class="p-3 text-muted text-center">
                                         <i class="bi bi-calendar-x fs-3 d-block mb-1"></i>
-                                        No hay citas programadas para hoy.
+                                        <?php echo t('No hay citas programadas para hoy.'); ?>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -425,7 +429,7 @@ for ($i = 6; $i >= 0; $i--) {
                             <div class="card-header py-2">
                                 <span class="section-title mb-0">
                                     <i class="bi bi-calendar-week me-1"></i>
-                                    Próximas citas (7 días)
+                                    <?php echo t('Próximas citas (7 días)'); ?>
                                 </span>
                             </div>
                             <div class="card-body p-0">
@@ -456,7 +460,7 @@ for ($i = 6; $i >= 0; $i--) {
                                 <?php else: ?>
                                     <div class="p-3 text-muted text-center">
                                         <i class="bi bi-calendar-x fs-3 d-block mb-1"></i>
-                                        Sin citas en los próximos 7 días.
+                                        <?php echo t('Sin citas en los próximos 7 días.'); ?>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -480,7 +484,7 @@ new Chart(ctx, {
     data: {
         labels: <?php echo json_encode(array_column($semana, 'fecha')); ?>,
         datasets: [{
-            label: 'Citas',
+            label: '<?php echo t('Citas'); ?>',
             data: <?php echo json_encode(array_column($semana, 'total')); ?>,
             backgroundColor: 'rgba(102,126,234,0.7)',
             borderColor:     'rgba(102,126,234,1)',
