@@ -65,6 +65,27 @@ while ($row = $resultado->fetch_assoc()) {
         )
     );
 }
+
+$sqlDoctores = "SELECT D.IDDOCTOR, D.NOMBRES, D.APELLIDOS
+                FROM ADM_DOCTOR D
+                WHERE D.ESTADO = 'A'
+                  AND EXISTS (
+                      SELECT 1 FROM ADM_USUARIO U
+                      INNER JOIN ADM_ROL R ON U.IDADM_ROL = R.IDADM_ROL
+                      WHERE R.CARGO = 'DOCTOR'
+                        AND U.ESTADO = 'A'
+                        AND U.NOMBRES = D.NOMBRES
+                        AND U.APELLIDOS = D.APELLIDOS
+                  )
+                ORDER BY D.NOMBRES";
+$resultDoctores  = $conexion->query($sqlDoctores);
+$doctoresActivos = array();
+while ($d = $resultDoctores->fetch_assoc()) {
+    $doctoresActivos[] = array(
+        'id'     => $d['IDDOCTOR'],
+        'nombre' => $d['NOMBRES'] . ' ' . $d['APELLIDOS'],
+    );
+}
 ?>
 <!doctype html>
 <html lang="es">
@@ -88,6 +109,36 @@ while ($row = $resultado->fetch_assoc()) {
         .leyenda-calendario { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; font-size: 0.8rem; }
         .leyenda-item { display: flex; align-items: center; gap: 5px; }
         .leyenda-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+        /* ── Vista por Doctor ─────────────────────────────────────── */
+        .cv-scroll { overflow-x: auto; border: 1px solid #dee2e6; border-radius: 4px; }
+        .cv-grid { position: relative; }
+        .cv-col-head {
+            position: absolute; box-sizing: border-box;
+            border-right: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6;
+            background: #f8f9fa; font-size: 0.78rem; text-align: center;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+        }
+        .cv-col-head.cv-day-head { font-weight: 600; background: #eef1f5; }
+        .cv-col-head.cv-day-head.cv-today { background: #fff3cd; }
+        .cv-time-label {
+            position: absolute; width: 64px; box-sizing: border-box;
+            font-size: 0.72rem; color: #6c757d; text-align: right; padding-right: 6px;
+            border-right: 1px solid #dee2e6; border-bottom: 1px solid #f1f1f1;
+        }
+        .cv-cell {
+            position: absolute; box-sizing: border-box;
+            border-right: 1px solid #f1f1f1; border-bottom: 1px solid #f1f1f1;
+        }
+        .cv-cell.cv-day-end { border-right: 1px solid #dee2e6; }
+        .cv-event {
+            position: absolute; box-sizing: border-box; border-radius: 4px;
+            color: #fff; font-size: 0.72rem; padding: 2px 4px; overflow: hidden;
+            cursor: pointer; line-height: 1.2; box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .cv-event b { display: block; }
+        .cv-doctores { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-size: 0.85rem; }
+        .cv-doctores label { display: flex; align-items: center; gap: 5px; margin: 0; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -178,13 +229,21 @@ while ($row = $resultado->fetch_assoc()) {
                                 <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#editModal">
                                     <i class="bi bi-calendar-plus"></i> Agendar Cita
                                 </button>
+                                <div class="btn-group ms-2" role="group">
+                                    <button type="button" id="btnVistaCalendario" class="btn btn-outline-primary active">
+                                        <i class="bi bi-calendar3"></i> Calendario
+                                    </button>
+                                    <button type="button" id="btnVistaDoctor" class="btn btn-outline-primary">
+                                        <i class="bi bi-people"></i> Vista por Doctor
+                                    </button>
+                                </div>
                                 <div class="page-title-subheading">Citas agendadas.</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="main-card mb-3 card">
+                <div class="main-card mb-3 card" id="viewFullCalendar">
                     <div class="card-body">
                         <!-- Leyenda de colores -->
                         <div class="leyenda-calendario">
@@ -194,6 +253,30 @@ while ($row = $resultado->fetch_assoc()) {
                             <span class="leyenda-item"><span class="leyenda-dot" style="background:#dc3545"></span> Cancelada</span>
                         </div>
                         <div id="calendar1"></div>
+                    </div>
+                </div>
+
+                <div class="main-card mb-3 card d-none" id="viewPorDoctor">
+                    <div class="card-body">
+                        <!-- Leyenda de colores -->
+                        <div class="leyenda-calendario">
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#ffc107"></span> Pendiente</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#28a745"></span> Confirmada</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#6f42c1"></span> Atendida</span>
+                            <span class="leyenda-item"><span class="leyenda-dot" style="background:#dc3545"></span> Cancelada</span>
+                        </div>
+                        <div class="cv-toolbar d-flex align-items-center gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="cvToday">Hoy</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="cvPrev"><i class="bi bi-chevron-left"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="cvNext"><i class="bi bi-chevron-right"></i></button>
+                            <strong id="cvRangeLabel" class="ms-2"></strong>
+                        </div>
+                        <div class="cv-scroll">
+                            <div id="cvGrid" class="cv-grid"></div>
+                        </div>
+                        <div class="cv-doctores mt-3" id="cvDoctorFiltros">
+                            <span class="fw-semibold me-2">Doctores:</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -262,24 +345,9 @@ while ($row = $resultado->fetch_assoc()) {
                         <label class="form-label">Doctor</label>
                         <select class="form-select select-busqueda" name="IdDoctor" required>
                             <option value="">Buscar doctor...</option>
-                            <?php
-                            $sqlDoctores = "SELECT D.IDDOCTOR, D.NOMBRES, D.APELLIDOS
-                                            FROM ADM_DOCTOR D
-                                            WHERE D.ESTADO = 'A'
-                                              AND EXISTS (
-                                                  SELECT 1 FROM ADM_USUARIO U
-                                                  INNER JOIN ADM_ROL R ON U.IDADM_ROL = R.IDADM_ROL
-                                                  WHERE R.CARGO = 'DOCTOR'
-                                                    AND U.ESTADO = 'A'
-                                                    AND U.NOMBRES = D.NOMBRES
-                                                    AND U.APELLIDOS = D.APELLIDOS
-                                              )
-                                            ORDER BY D.NOMBRES";
-                            $queryD = $conexion->query($sqlDoctores);
-                            while ($v = $queryD->fetch_assoc()):
-                            ?>
-                            <option value="<?php echo $v['IDDOCTOR']; ?>"><?php echo htmlspecialchars($v['NOMBRES'].' '.$v['APELLIDOS']); ?></option>
-                            <?php endwhile; ?>
+                            <?php foreach ($doctoresActivos as $v): ?>
+                            <option value="<?php echo $v['id']; ?>"><?php echo htmlspecialchars($v['nombre']); ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">
@@ -450,6 +518,81 @@ function validarFormulario() {
     return true;
 }
 
+// ── Datos compartidos (FullCalendar + Vista por Doctor) ───────────────
+const eventosAll      = <?php echo json_encode($eventos); ?>;
+const doctoresActivos = <?php echo json_encode($doctoresActivos); ?>;
+
+// ── Modal de gestión de cita (usado por ambas vistas) ──────────────────
+function abrirModalCita(id, title, startDate, p) {
+    const est      = p.cita || 'Pendiente';
+    const atendida = est === 'A';
+
+    // Limpiar y formatear teléfono para WhatsApp
+    let tel = p.telefono ? p.telefono.replace(/\D/g, '') : '';
+    if (tel.length === 9 && tel.startsWith('9'))        tel = '593' + tel;
+    else if (tel.length === 10 && tel.startsWith('09')) tel = '593' + tel.substring(1);
+
+    const msg = encodeURIComponent(
+        `Hola, le saludamos de SROSS Nutritions. Le recordamos su cita de ${p.consulta} para el día ` +
+        `${startDate.toLocaleDateString()} a las ` +
+        `${startDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}. ¿Nos confirma su asistencia?`
+    );
+
+    document.getElementById('eventDetails').innerHTML = `
+        <div class="row">
+            <div class="col-md-8">
+                <p><strong>Paciente:</strong> ${title}</p>
+                <p><strong>Teléfono:</strong> ${p.telefono || 'No registrado'}</p>
+                <p><strong>Inicio:</strong> ${startDate.toLocaleString()}</p>
+                <p><strong>Doctor:</strong> ${p.medico}</p>
+                <p><strong>Estado:</strong> ${estadoBadge(est)}</p>
+            </div>
+            <div class="col-md-4 text-center">
+                ${tel
+                    ? `<a href="https://wa.me/${tel}?text=${msg}" target="_blank"
+                        class="btn btn-outline-success btn-lg mb-2">
+                        <i class="bi bi-whatsapp"></i> Confirmar por WhatsApp
+                       </a>`
+                    : '<p class="text-danger small">Sin número para WhatsApp</p>'
+                }
+            </div>
+        </div>
+        <hr>
+        <p><strong>Tipo consulta:</strong> ${p.consulta}</p>
+        ${p.comentario ? `<p><strong>Comentario:</strong> ${p.comentario}</p>` : ''}
+    `;
+
+    // Controlar visibilidad de botones según estado
+    document.getElementById('idCita').value     = id;
+    document.getElementById('estadoCita').value = est;
+
+    const btnAtender   = document.getElementById('btnAtender');
+    const btnHistorial = document.getElementById('btnHistorial');
+    const btnReagendar = document.getElementById('btnReagendar');
+    const btnConfirmar = document.getElementById('btnConfirmar');
+    const btnCancelar  = document.getElementById('btnCancelar');
+
+    // Cerrar panel reagendar al abrir una nueva cita
+    cerrarReagendar();
+
+    if (atendida) {
+        btnAtender.classList.add('d-none');
+        btnReagendar.classList.add('d-none');
+        btnConfirmar.classList.add('d-none');
+        btnCancelar.classList.add('d-none');
+        btnHistorial.href = `historial_atenciones.php?q=${encodeURIComponent(title)}`;
+        btnHistorial.classList.remove('d-none');
+    } else {
+        btnAtender.classList.remove('d-none');
+        btnReagendar.classList.remove('d-none');
+        btnConfirmar.classList.remove('d-none');
+        btnCancelar.classList.remove('d-none');
+        btnHistorial.classList.add('d-none');
+    }
+
+    new bootstrap.Modal(document.getElementById('eventModal')).show();
+}
+
 // ── FullCalendar ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -462,82 +605,208 @@ document.addEventListener('DOMContentLoaded', function () {
             right:  'dayGridMonth,timeGridWeek,timeGridDay'
         },
         initialView: 'dayGridMonth',
-        events: <?php echo json_encode($eventos); ?>,
+        events: eventosAll,
 
         eventClick: function (info) {
-            const p    = info.event.extendedProps;
-            const est  = p.cita || 'Pendiente';
-            const atendida = est === 'A';
-
-            // Limpiar y formatear teléfono para WhatsApp
-            let tel = p.telefono ? p.telefono.replace(/\D/g, '') : '';
-            if (tel.length === 9 && tel.startsWith('9'))        tel = '593' + tel;
-            else if (tel.length === 10 && tel.startsWith('09')) tel = '593' + tel.substring(1);
-
-            const msg = encodeURIComponent(
-                `Hola, le saludamos de SROSS Nutritions. Le recordamos su cita de ${p.consulta} para el día ` +
-                `${info.event.start.toLocaleDateString()} a las ` +
-                `${info.event.start.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}. ¿Nos confirma su asistencia?`
-            );
-
-            document.getElementById('eventDetails').innerHTML = `
-                <div class="row">
-                    <div class="col-md-8">
-                        <p><strong>Paciente:</strong> ${info.event.title}</p>
-                        <p><strong>Teléfono:</strong> ${p.telefono || 'No registrado'}</p>
-                        <p><strong>Inicio:</strong> ${info.event.start.toLocaleString()}</p>
-                        <p><strong>Doctor:</strong> ${p.medico}</p>
-                        <p><strong>Estado:</strong> ${estadoBadge(est)}</p>
-                    </div>
-                    <div class="col-md-4 text-center">
-                        ${tel
-                            ? `<a href="https://wa.me/${tel}?text=${msg}" target="_blank"
-                                class="btn btn-outline-success btn-lg mb-2">
-                                <i class="bi bi-whatsapp"></i> Confirmar por WhatsApp
-                               </a>`
-                            : '<p class="text-danger small">Sin número para WhatsApp</p>'
-                        }
-                    </div>
-                </div>
-                <hr>
-                <p><strong>Tipo consulta:</strong> ${p.consulta}</p>
-                ${p.comentario ? `<p><strong>Comentario:</strong> ${p.comentario}</p>` : ''}
-            `;
-
-            // Controlar visibilidad de botones según estado
-            document.getElementById('idCita').value     = info.event.id;
-            document.getElementById('estadoCita').value = est;
-
-            const btnAtender   = document.getElementById('btnAtender');
-            const btnHistorial = document.getElementById('btnHistorial');
-            const btnReagendar = document.getElementById('btnReagendar');
-            const btnConfirmar = document.getElementById('btnConfirmar');
-            const btnCancelar  = document.getElementById('btnCancelar');
-
-            // Cerrar panel reagendar al abrir una nueva cita
-            cerrarReagendar();
-
-            if (atendida) {
-                btnAtender.classList.add('d-none');
-                btnReagendar.classList.add('d-none');
-                btnConfirmar.classList.add('d-none');
-                btnCancelar.classList.add('d-none');
-                btnHistorial.href = `historial_atenciones.php?q=${encodeURIComponent(info.event.title)}`;
-                btnHistorial.classList.remove('d-none');
-            } else {
-                btnAtender.classList.remove('d-none');
-                btnReagendar.classList.remove('d-none');
-                btnConfirmar.classList.remove('d-none');
-                btnCancelar.classList.remove('d-none');
-                btnHistorial.classList.add('d-none');
-            }
-
-            new bootstrap.Modal(document.getElementById('eventModal')).show();
+            abrirModalCita(info.event.id, info.event.title, info.event.start, info.event.extendedProps);
         }
     });
 
     calendar.render();
+
+    inicializarVistaPorDoctor();
+
+    document.getElementById('btnVistaCalendario').addEventListener('click', function () {
+        document.getElementById('viewFullCalendar').classList.remove('d-none');
+        document.getElementById('viewPorDoctor').classList.add('d-none');
+        this.classList.add('active');
+        document.getElementById('btnVistaDoctor').classList.remove('active');
+        calendar.updateSize();
+    });
+
+    document.getElementById('btnVistaDoctor').addEventListener('click', function () {
+        document.getElementById('viewFullCalendar').classList.add('d-none');
+        document.getElementById('viewPorDoctor').classList.remove('d-none');
+        this.classList.add('active');
+        document.getElementById('btnVistaCalendario').classList.remove('active');
+        renderVistaPorDoctor();
+    });
 });
+
+// ── Vista por Doctor (semana en columnas por doctor) ───────────────────
+const CV_START_HOUR    = 6;
+const CV_END_HOUR      = 21;
+const CV_SLOT_MINUTES  = 30;
+const CV_SLOT_HEIGHT   = 32;
+const CV_COL_WIDTH     = 140;
+const CV_TIME_COL_W    = 64;
+const CV_DAY_HEAD_H    = 30;
+const CV_DOC_HEAD_H    = 28;
+const CV_HEADER_H      = CV_DAY_HEAD_H + CV_DOC_HEAD_H;
+const CV_DIAS          = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const CV_MESES         = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+let cvWeekStart      = startOfWeek(new Date());
+const cvDoctoresOcultos = new Set();
+
+function startOfWeek(d) {
+    const r = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    r.setDate(r.getDate() - r.getDay());
+    return r;
+}
+
+function cvEscapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+}
+
+function mismaFecha(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function cvRangeLabel(weekStart) {
+    const end = new Date(weekStart);
+    end.setDate(end.getDate() + 6);
+    if (weekStart.getMonth() === end.getMonth()) {
+        return `${weekStart.getDate()} - ${end.getDate()} de ${CV_MESES[end.getMonth()]} ${end.getFullYear()}`;
+    }
+    return `${weekStart.getDate()} de ${CV_MESES[weekStart.getMonth()]} - ${end.getDate()} de ${CV_MESES[end.getMonth()]} ${end.getFullYear()}`;
+}
+
+function inicializarVistaPorDoctor() {
+    const cont = document.getElementById('cvDoctorFiltros');
+    doctoresActivos.forEach(function (doc) {
+        const id = 'cvDoc_' + doc.id;
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" id="${id}" checked> ${doc.nombre}`;
+        cont.appendChild(label);
+        label.querySelector('input').addEventListener('change', function (e) {
+            if (e.target.checked) cvDoctoresOcultos.delete(doc.nombre);
+            else cvDoctoresOcultos.add(doc.nombre);
+            renderVistaPorDoctor();
+        });
+    });
+
+    document.getElementById('cvToday').addEventListener('click', function () {
+        cvWeekStart = startOfWeek(new Date());
+        renderVistaPorDoctor();
+    });
+    document.getElementById('cvPrev').addEventListener('click', function () {
+        cvWeekStart.setDate(cvWeekStart.getDate() - 7);
+        renderVistaPorDoctor();
+    });
+    document.getElementById('cvNext').addEventListener('click', function () {
+        cvWeekStart.setDate(cvWeekStart.getDate() + 7);
+        renderVistaPorDoctor();
+    });
+}
+
+function renderVistaPorDoctor() {
+    const doctores = doctoresActivos.filter(d => !cvDoctoresOcultos.has(d.nombre));
+    const grid      = document.getElementById('cvGrid');
+    const nDoc      = Math.max(doctores.length, 1);
+    const nSlots    = ((CV_END_HOUR - CV_START_HOUR) * 60) / CV_SLOT_MINUTES;
+    const totalCols = 7 * nDoc;
+    const gridW     = CV_TIME_COL_W + totalCols * CV_COL_WIDTH;
+    const gridH      = CV_HEADER_H + nSlots * CV_SLOT_HEIGHT;
+
+    document.getElementById('cvRangeLabel').textContent = cvRangeLabel(cvWeekStart);
+
+    grid.innerHTML = '';
+    grid.style.width  = gridW + 'px';
+    grid.style.height = gridH + 'px';
+
+    const hoy = new Date();
+
+    // Cabeceras de día y doctor
+    for (let dia = 0; dia < 7; dia++) {
+        const fecha = new Date(cvWeekStart);
+        fecha.setDate(fecha.getDate() + dia);
+        const left      = CV_TIME_COL_W + dia * nDoc * CV_COL_WIDTH;
+        const width     = nDoc * CV_COL_WIDTH;
+        const esHoy     = mismaFecha(fecha, hoy);
+
+        const dayHead = document.createElement('div');
+        dayHead.className = 'cv-col-head cv-day-head' + (esHoy ? ' cv-today' : '');
+        dayHead.style.left = left + 'px'; dayHead.style.top = '0px';
+        dayHead.style.width = width + 'px'; dayHead.style.height = CV_DAY_HEAD_H + 'px';
+        dayHead.textContent = `${CV_DIAS[fecha.getDay()]} ${fecha.getDate()}`;
+        grid.appendChild(dayHead);
+
+        doctores.forEach(function (doc, i) {
+            const docHead = document.createElement('div');
+            docHead.className = 'cv-col-head';
+            docHead.style.left = (left + i * CV_COL_WIDTH) + 'px';
+            docHead.style.top  = CV_DAY_HEAD_H + 'px';
+            docHead.style.width = CV_COL_WIDTH + 'px';
+            docHead.style.height = CV_DOC_HEAD_H + 'px';
+            docHead.textContent = doc.nombre;
+            grid.appendChild(docHead);
+        });
+    }
+
+    // Etiquetas de hora + líneas de fondo
+    for (let s = 0; s < nSlots; s++) {
+        const minutos = CV_START_HOUR * 60 + s * CV_SLOT_MINUTES;
+        const h = Math.floor(minutos / 60), m = minutos % 60;
+        const ampm = h < 12 ? 'AM' : 'PM';
+        const h12  = (h % 12) === 0 ? 12 : h % 12;
+        const top  = CV_HEADER_H + s * CV_SLOT_HEIGHT;
+
+        const lbl = document.createElement('div');
+        lbl.className = 'cv-time-label';
+        lbl.style.left = '0px'; lbl.style.top = top + 'px';
+        lbl.style.height = CV_SLOT_HEIGHT + 'px';
+        lbl.textContent = `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+        grid.appendChild(lbl);
+
+        for (let c = 0; c < totalCols; c++) {
+            const cell = document.createElement('div');
+            const esFinDia = (c + 1) % nDoc === 0;
+            cell.className = 'cv-cell' + (esFinDia ? ' cv-day-end' : '');
+            cell.style.left = (CV_TIME_COL_W + c * CV_COL_WIDTH) + 'px';
+            cell.style.top  = top + 'px';
+            cell.style.width = CV_COL_WIDTH + 'px';
+            cell.style.height = CV_SLOT_HEIGHT + 'px';
+            grid.appendChild(cell);
+        }
+    }
+
+    // Eventos de la semana visible
+    const weekEnd = new Date(cvWeekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
+    eventosAll.forEach(function (ev) {
+        const inicio = new Date(ev.start);
+        const fin    = new Date(ev.end);
+        if (inicio < cvWeekStart || inicio >= weekEnd) return;
+
+        const docIdx = doctores.findIndex(d => d.nombre === ev.extendedProps.medico);
+        if (docIdx === -1) return;
+
+        const diaIdx = Math.floor((inicio - cvWeekStart) / 86400000);
+        const minutosInicio = inicio.getHours() * 60 + inicio.getMinutes() - CV_START_HOUR * 60;
+        const duracionMin   = Math.max((fin - inicio) / 60000, CV_SLOT_MINUTES / 2);
+
+        const left   = CV_TIME_COL_W + (diaIdx * nDoc + docIdx) * CV_COL_WIDTH + 2;
+        const top    = CV_HEADER_H + (minutosInicio / CV_SLOT_MINUTES) * CV_SLOT_HEIGHT;
+        const height = Math.max((duracionMin / CV_SLOT_MINUTES) * CV_SLOT_HEIGHT - 2, 18);
+
+        const div = document.createElement('div');
+        div.className = 'cv-event';
+        div.style.left   = left + 'px';
+        div.style.top    = top + 'px';
+        div.style.width  = (CV_COL_WIDTH - 4) + 'px';
+        div.style.height = height + 'px';
+        div.style.background = ev.backgroundColor;
+        div.innerHTML = `<b>${inicio.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</b>${cvEscapeHtml(ev.title)}`;
+        div.addEventListener('click', function () {
+            abrirModalCita(ev.id, ev.title, inicio, ev.extendedProps);
+        });
+        grid.appendChild(div);
+    });
+}
 
 // ── Select2 en modal Agendar ─────────────────────────────────────────
 $(document).ready(function () {
