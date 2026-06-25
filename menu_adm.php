@@ -154,6 +154,11 @@ function menuActivo($paginas, $actual) {
                     </li>
                 </ul>
             </li>
+            <li>
+                <a href="gestionar_tipos_consulta.php" class="<?php echo menuActivo('gestionar_tipos_consulta.php', $paginaActual); ?>">
+                    <i class="metismenu-icon pe-7s-palette"></i> Tipos de Consulta
+                </a>
+            </li>
             <?php endif; ?>
 
             <!-- ══ BILLS (solo SISTEMA) ════════════════════════════════ -->
