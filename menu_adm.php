@@ -3,7 +3,32 @@ $rol       = $_SESSION['rol'] ?? '';
 $esSistema = ($rol === 'SISTEMA');
 $esDoctor  = ($rol === 'DOCTOR');
 $esUsuario = ($rol === 'USUARIO');
+
+$paginaActual = basename($_SERVER['PHP_SELF'] ?? '');
+function menuActivo($paginas, $actual) {
+    $paginas = is_array($paginas) ? $paginas : [$paginas];
+    return in_array($actual, $paginas) ? 'mm-active' : '';
+}
 ?>
+<style>
+    /* Corrige sidebar sin scroll: garantiza que todos los ítems sean alcanzables */
+    .app-sidebar       { height: 100vh !important; display: flex !important; flex-direction: column !important; }
+    .scrollbar-sidebar  { flex: 1 1 auto; min-height: 0; overflow-y: auto !important; overflow-x: hidden !important; }
+    .app-sidebar__inner { padding-bottom: 12px; }
+
+    .sidebar-logout-footer {
+        flex: 0 0 auto;
+        border-top: 1px solid rgba(0,0,0,.08);
+        padding: 10px 14px;
+    }
+    .sidebar-logout-footer a {
+        display: flex; align-items: center; gap: 8px;
+        color: #dc3545; font-size: .85rem; font-weight: 600;
+        text-decoration: none; padding: 7px 10px; border-radius: 6px;
+        transition: background .15s;
+    }
+    .sidebar-logout-footer a:hover { background: rgba(220,53,69,.08); }
+</style>
 
 <div class="app-header__logo">
     <div class="logo-src"></div>
@@ -31,7 +56,7 @@ $esUsuario = ($rol === 'USUARIO');
             <!-- ══ DASHBOARD ══════════════════════════════════════════ -->
             <li class="app-sidebar__heading">Dashboard</li>
             <li>
-                <a href="home.php" class="mm-active">
+                <a href="home.php" class="<?php echo menuActivo('home.php', $paginaActual); ?>">
                     <i class="metismenu-icon pe-7s-rocket"></i> General
                 </a>
             </li>
@@ -39,32 +64,32 @@ $esUsuario = ($rol === 'USUARIO');
             <!-- ══ AGENDA ══════════════════════════════════════════════ -->
             <li class="app-sidebar__heading">Agenda</li>
             <li>
-                <a href="SCH_Calendar.php">
+                <a href="SCH_Calendar.php" class="<?php echo menuActivo('SCH_Calendar.php', $paginaActual); ?>">
                     <i class="metismenu-icon pe-7s-display2"></i> Calendario
                 </a>
             </li>
             <li>
-                <a href="Agenda_Pendientes.php">
+                <a href="Agenda_Pendientes.php" class="<?php echo menuActivo('Agenda_Pendientes.php', $paginaActual); ?>">
                     <i class="metismenu-icon pe-7s-date"></i> Pendientes
                 </a>
             </li>
             <?php if ($esSistema || $esDoctor): ?>
             <li>
-                <a href="historial_atenciones.php">
+                <a href="historial_atenciones.php" class="<?php echo menuActivo('historial_atenciones.php', $paginaActual); ?>">
                     <i class="metismenu-icon pe-7s-date"></i> Atendidas
                 </a>
             </li>
             <?php endif; ?>
             <?php if ($esSistema): ?>
             <li>
-                <a href="VTA_Concretado.php">
+                <a href="VTA_Concretado.php" class="<?php echo menuActivo('VTA_Concretado.php', $paginaActual); ?>">
                     <i class="metismenu-icon pe-7s-diamond"></i> Canceladas
                 </a>
             </li>
             <?php endif; ?>
             <?php if ($esSistema || $esDoctor): ?>
             <li>
-                <a href="Enviar_Notificacion.php">
+                <a href="Enviar_Notificacion.php" class="<?php echo menuActivo('Enviar_Notificacion.php', $paginaActual); ?>">
                     <i class="metismenu-icon pe-7s-mail"></i> Enviar Notificación
                 </a>
             </li>
@@ -80,7 +105,7 @@ $esUsuario = ($rol === 'USUARIO');
                 </a>
                 <ul>
                     <li>
-                        <a href="listado_pacientes.php">
+                        <a href="listado_pacientes.php" class="<?php echo menuActivo('listado_pacientes.php', $paginaActual); ?>">
                             <i class="metismenu-icon"></i> Listado de Pacientes
                         </a>
                     </li>
@@ -163,20 +188,20 @@ $esUsuario = ($rol === 'USUARIO');
             <!-- ══ REPORTES ════════════════════════════════════════════ -->
             <li class="app-sidebar__heading">Reportes</li>
             <li>
-                <a href="RPT_Vendedor_Vta.php">
+                <a href="RPT_Vendedor_Vta.php" class="<?php echo menuActivo('RPT_Vendedor_Vta.php', $paginaActual); ?>">
                     <i class="metismenu-icon pe-7s-monitor"></i> Mis Citas
                 </a>
             </li>
             <?php if ($esSistema || $esDoctor): ?>
             <li>
-                <a href="visor_plantillas.php">
+                <a href="visor_plantillas.php" class="<?php echo menuActivo('visor_plantillas.php', $paginaActual); ?>">
                     <i class="metismenu-icon pe-7s-note2"></i> Plantillas
                 </a>
             </li>
             <?php endif; ?>
             <?php if ($esSistema): ?>
             <li>
-                <a href="RPT_General_vta.php">
+                <a href="RPT_General_vta.php" class="<?php echo menuActivo('RPT_General_vta.php', $paginaActual); ?>">
                     <i class="metismenu-icon pe-7s-graph"></i> Citas Generales
                 </a>
             </li>
@@ -206,14 +231,13 @@ $esUsuario = ($rol === 'USUARIO');
             </li>
             <?php endif; ?>
 
-            <!-- ══ CUENTA ══════════════════════════════════════════════ -->
-            <li class="app-sidebar__heading">Cuenta</li>
-            <li>
-                <a href="salir.php">
-                    <i class="metismenu-icon pe-7s-power"></i> Cerrar Sesión
-                </a>
-            </li>
-
         </ul>
     </div>
+</div>
+
+<!-- ══ CERRAR SESIÓN — fijo al pie, siempre visible sin necesidad de scroll ══ -->
+<div class="sidebar-logout-footer">
+    <a href="salir.php">
+        <i class="metismenu-icon pe-7s-power"></i> Cerrar Sesión
+    </a>
 </div>
