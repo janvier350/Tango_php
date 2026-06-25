@@ -109,9 +109,11 @@ $res_heat = $stmt_heat->get_result();
 // Construimos un array indexado por [mes][dia] para cada tipo de flujo
 $datos_mapa_ingresos = [];
 $datos_mapa_egresos  = [];
+$datos_mapa_total    = [];
 while ($row = $res_heat->fetch_assoc()) {
     $datos_mapa_ingresos[$row['mes']][$row['dia']] = $row['total_ingresos'];
     $datos_mapa_egresos[$row['mes']][$row['dia']]  = $row['total_egresos'];
+    $datos_mapa_total[$row['mes']][$row['dia']]    = $row['total_ingresos'] + $row['total_egresos'];
 }
 
 // Nombres de los meses para las cabeceras
@@ -376,7 +378,13 @@ $json_egresos  = json_encode($data_egr_tend);
     <div class="card-body">
         <ul class="nav nav-tabs" id="tabsMapaCalor" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active text-success fw-bold" id="tab-ingresos-btn" data-bs-toggle="tab"
+                <button class="nav-link active fw-bold" id="tab-total-btn" data-bs-toggle="tab"
+                        data-bs-target="#tab-total" type="button" role="tab">
+                    <i class="bi bi-grid-3x3-gap-fill me-1"></i> Ingresos y Gastos
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link text-success fw-bold" id="tab-ingresos-btn" data-bs-toggle="tab"
                         data-bs-target="#tab-ingresos" type="button" role="tab">
                     <i class="bi bi-graph-up-arrow me-1"></i> Ingresos
                 </button>
@@ -389,7 +397,10 @@ $json_egresos  = json_encode($data_egr_tend);
             </li>
         </ul>
         <div class="tab-content border border-top-0 rounded-bottom p-3 overflow-auto">
-            <div class="tab-pane fade show active" id="tab-ingresos" role="tabpanel">
+            <div class="tab-pane fade show active" id="tab-total" role="tabpanel">
+                <?php echo render_mapa_calor($datos_mapa_total, $meses_nombres, $anio_actual, $id_oficina_consulta); ?>
+            </div>
+            <div class="tab-pane fade" id="tab-ingresos" role="tabpanel">
                 <?php echo render_mapa_calor($datos_mapa_ingresos, $meses_nombres, $anio_actual, $id_oficina_consulta); ?>
             </div>
             <div class="tab-pane fade" id="tab-egresos" role="tabpanel">
