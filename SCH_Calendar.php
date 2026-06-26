@@ -31,11 +31,13 @@ $query = "SELECT
             A.HORA_FIN,
             A.ESTADO_CITA,
             A.COMENTARIO,
-            CONCAT(D.NOMBRES, ' ', D.APELLIDOS) AS DOCTOR
+            CONCAT(D.NOMBRES, ' ', D.APELLIDOS) AS DOCTOR,
+            E.DESCRIPCION AS AGENCIA
           FROM AG_CITA A
           INNER JOIN AG_PACIENTE B     ON A.IDPACIENTE      = B.IDPACIENTE
           INNER JOIN AG_TIPOCONSULTA C ON A.IDTIPOCONSULTA  = C.IDTIPOCONSULTA
           INNER JOIN ADM_USUARIO D     ON A.IDDOCTOR        = D.IDADM_USUARIO
+          LEFT JOIN  ADM_AGENCIA E     ON A.IDAGENCIA       = E.IDAGENCIA
           WHERE A.ESTADO = 'A'";
 
 $resultado = $conexion->query($query);
@@ -72,6 +74,7 @@ while ($row = $resultado->fetch_assoc()) {
             'consulta'  => $row['TIPO_CONSULTA'],
             'telefono'  => $row['TELEFONO'],
             'comentario'=> $row['COMENTARIO'],
+            'agencia'   => $row['AGENCIA'],
         )
     );
 }
@@ -125,6 +128,11 @@ while ($d = $resultDoctores->fetch_assoc()) {
             border-radius: 3px;
         }
         .fc-list-event-dot { border-radius: 50%; border-width: 5px !important; }
+        /* Contenido completo del evento en vistas semana/día (sin truncar) */
+        .fc-event-main-custom { white-space: normal; padding: 1px 2px; }
+        .fc-event-time-custom { font-size: 0.72em; font-weight: 600; opacity: 0.9; }
+        .fc-event-title-custom { font-weight: 700; word-break: break-word; }
+        .fc-event-sub-custom { font-size: 0.72em; opacity: 0.9; word-break: break-word; }
         /* Leyenda de colores */
         .leyenda-calendario { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; font-size: 0.8rem; }
         .leyenda-item { display: flex; align-items: center; gap: 5px; }
@@ -161,6 +169,34 @@ while ($d = $resultDoctores->fetch_assoc()) {
         }
         .cv-event b { display: block; }
         .cv-doctores { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-size: 0.85rem; }
+
+        /* ── Lista de citas para móvil (Vista por Doctor) ───────────── */
+        .cv-list { display: none; }
+        .cv-list-day {
+            font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .03em;
+            color: #555; background: #eef1f5; padding: 6px 10px; border-radius: 4px; margin: 12px 0 6px;
+        }
+        .cv-list-day.cv-today { background: #fff3cd; color: #7a5b00; }
+        .cv-list-card {
+            display: flex; align-items: stretch; gap: 0; border-radius: 6px; overflow: hidden;
+            margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); cursor: pointer;
+        }
+        .cv-list-card .cv-list-color { width: 6px; flex: 0 0 6px; }
+        .cv-list-card .cv-list-body { flex: 1 1 auto; padding: 8px 10px; color: #fff; min-width: 0; }
+        .cv-list-card .cv-list-time { font-size: 0.78rem; font-weight: 600; opacity: 0.9; }
+        .cv-list-card .cv-list-paciente { font-size: 0.95rem; font-weight: 700; word-break: break-word; }
+        .cv-list-card .cv-list-sub { font-size: 0.78rem; opacity: 0.9; white-space: normal; word-break: break-word; }
+        .cv-list-empty { color: #888; font-size: 0.85rem; padding: 10px; }
+
+        @media (max-width: 768px) {
+            .cv-scroll { display: none; }
+            .cv-list { display: block; }
+            .page-title-heading > div { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+            .page-title-heading .btn-group { flex-wrap: wrap; }
+            .fc-toolbar { flex-direction: column; gap: 8px; }
+            .fc-toolbar-chunk { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+            .fc-toolbar-title { font-size: 1.1rem !important; }
+        }
         .cv-doctores label { display: flex; align-items: center; gap: 5px; margin: 0; cursor: pointer; }
     </style>
 </head>
@@ -320,6 +356,7 @@ while ($d = $resultDoctores->fetch_assoc()) {
                         <div class="cv-scroll">
                             <div id="cvGrid" class="cv-grid"></div>
                         </div>
+                        <div class="cv-list" id="cvList"></div>
                         <div class="cv-doctores mt-3" id="cvDoctorFiltros">
                             <span class="fw-semibold me-2"><?php echo t('Doctores'); ?>:</span>
                         </div>
@@ -621,6 +658,7 @@ function abrirModalCita(id, title, startDate, p) {
                 <p><strong>Teléfono:</strong> ${p.telefono || 'No registrado'}</p>
                 <p><strong>Inicio:</strong> ${startDate.toLocaleString()}</p>
                 <p><strong>Doctor:</strong> ${p.medico}</p>
+                <p><strong>Location:</strong> ${p.agencia || 'No registrada'}</p>
                 <p><strong>Estado:</strong> ${estadoBadge(est)}</p>
             </div>
             <div class="col-md-4 text-center">
@@ -679,17 +717,32 @@ function abrirModalCita(id, title, startDate, p) {
 // ── FullCalendar ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
 
-    var calendarEl = document.getElementById('calendar1');
-    var calendar   = new FullCalendar.Calendar(calendarEl, {
+    var calendarEl  = document.getElementById('calendar1');
+    var esMovilInit = window.innerWidth <= 768;
+    var calendar    = new FullCalendar.Calendar(calendarEl, {
         locale: 'es',
         headerToolbar: {
             left:   'prev,next today',
             center: 'title',
             right:  'dayGridMonth,timeGridWeek,timeGridDay'
         },
-        initialView: 'dayGridMonth',
+        initialView: esMovilInit ? 'timeGridDay' : 'dayGridMonth',
         eventDisplay: 'block',
         events: eventosAll,
+
+        eventContent: function (arg) {
+            if (!arg.view.type.startsWith('timeGrid')) return true;
+            const p = arg.event.extendedProps;
+            const sub = [p.consulta, p.agencia].filter(Boolean).join(' — ');
+            const div = document.createElement('div');
+            div.className = 'fc-event-main-custom';
+            div.innerHTML = `
+                <div class="fc-event-time-custom">${arg.timeText}</div>
+                <div class="fc-event-title-custom">${cvEscapeHtml(arg.event.title)}</div>
+                ${sub ? `<div class="fc-event-sub-custom">${cvEscapeHtml(sub)}</div>` : ''}
+            `;
+            return { domNodes: [div] };
+        },
 
         eventClick: function (info) {
             abrirModalCita(info.event.id, info.event.title, info.event.start, info.event.extendedProps);
@@ -890,6 +943,60 @@ function renderVistaPorDoctor() {
             abrirModalCita(ev.id, ev.title, inicio, ev.extendedProps);
         });
         grid.appendChild(div);
+    });
+
+    renderVistaPorDoctorLista(doctores, weekEnd);
+}
+
+// ── Vista por Doctor: lista de tarjetas apiladas (móvil) ────────────────
+function renderVistaPorDoctorLista(doctores, weekEnd) {
+    const cont = document.getElementById('cvList');
+    cont.innerHTML = '';
+
+    const hoy = new Date();
+    const citas = eventosAll
+        .filter(function (ev) {
+            const inicio = new Date(ev.start);
+            if (inicio < cvWeekStart || inicio >= weekEnd) return false;
+            return doctores.some(d => d.nombre === ev.extendedProps.medico);
+        })
+        .sort((a, b) => new Date(a.start) - new Date(b.start));
+
+    if (citas.length === 0) {
+        cont.innerHTML = '<div class="cv-list-empty">Sin citas en este rango.</div>';
+        return;
+    }
+
+    let diaActual = null;
+    citas.forEach(function (ev) {
+        const inicio = new Date(ev.start);
+        const p      = ev.extendedProps;
+
+        const claveDia = inicio.toDateString();
+        if (claveDia !== diaActual) {
+            diaActual = claveDia;
+            const esHoy = mismaFecha(inicio, hoy);
+            const head  = document.createElement('div');
+            head.className = 'cv-list-day' + (esHoy ? ' cv-today' : '');
+            head.textContent = `${CV_DIAS[inicio.getDay()]} ${inicio.getDate()} de ${CV_MESES[inicio.getMonth()]}`;
+            cont.appendChild(head);
+        }
+
+        const card = document.createElement('div');
+        card.className = 'cv-list-card';
+        card.innerHTML = `
+            <div class="cv-list-color" style="background:${ev.borderColor || '#333'}"></div>
+            <div class="cv-list-body" style="background:${ev.backgroundColor}">
+                <div class="cv-list-time">${inicio.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                <div class="cv-list-paciente">${cvEscapeHtml(ev.title)}</div>
+                <div class="cv-list-sub">${cvEscapeHtml(p.consulta || '')} — Dr. ${cvEscapeHtml(p.medico || '')}</div>
+                <div class="cv-list-sub">L: ${cvEscapeHtml(p.agencia || 'Sin asignar')}</div>
+            </div>
+        `;
+        card.addEventListener('click', function () {
+            abrirModalCita(ev.id, ev.title, inicio, p);
+        });
+        cont.appendChild(card);
     });
 }
 
