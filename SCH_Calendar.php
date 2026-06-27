@@ -196,6 +196,18 @@ while ($d = $resultDoctores->fetch_assoc()) {
             .fc-toolbar { flex-direction: column; gap: 8px; }
             .fc-toolbar-chunk { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
             .fc-toolbar-title { font-size: 1.1rem !important; }
+
+            /* La leyenda pasa al final de la tarjeta para ganar espacio arriba */
+            #viewFullCalendar .card-body,
+            #viewPorDoctor .card-body { display: flex; flex-direction: column; }
+            #viewFullCalendar .leyenda-calendario,
+            #viewPorDoctor .leyenda-calendario { order: 5; margin-top: 6px; }
+            #viewFullCalendar .cv-toolbar,
+            #viewFullCalendar #calendar1,
+            #viewPorDoctor .cv-toolbar,
+            #viewPorDoctor .cv-scroll,
+            #viewPorDoctor .cv-list,
+            #viewPorDoctor .cv-doctores { order: 1; }
         }
         .cv-doctores label { display: flex; align-items: center; gap: 5px; margin: 0; cursor: pointer; }
     </style>
@@ -728,18 +740,21 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         initialView: esMovilInit ? 'timeGridDay' : 'dayGridMonth',
         eventDisplay: 'block',
+        eventMinHeight: 70,
         events: eventosAll,
 
         eventContent: function (arg) {
             if (!arg.view.type.startsWith('timeGrid')) return true;
             const p = arg.event.extendedProps;
-            const sub = [p.consulta, p.agencia].filter(Boolean).join(' — ');
+            const fmt = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const rango = `${fmt(arg.event.start)} - ${arg.event.end ? fmt(arg.event.end) : ''}`;
             const div = document.createElement('div');
             div.className = 'fc-event-main-custom';
             div.innerHTML = `
-                <div class="fc-event-time-custom">${arg.timeText}</div>
+                <div class="fc-event-time-custom">${rango}</div>
                 <div class="fc-event-title-custom">${cvEscapeHtml(arg.event.title)}</div>
-                ${sub ? `<div class="fc-event-sub-custom">${cvEscapeHtml(sub)}</div>` : ''}
+                <div class="fc-event-sub-custom">Dr. ${cvEscapeHtml(p.medico || '')}</div>
+                <div class="fc-event-sub-custom">L: ${cvEscapeHtml(p.agencia || 'Sin asignar')}</div>
             `;
             return { domNodes: [div] };
         },
@@ -982,12 +997,15 @@ function renderVistaPorDoctorLista(doctores, weekEnd) {
             cont.appendChild(head);
         }
 
+        const fin  = new Date(ev.end);
+        const fmt  = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
         const card = document.createElement('div');
         card.className = 'cv-list-card';
         card.innerHTML = `
             <div class="cv-list-color" style="background:${ev.borderColor || '#333'}"></div>
             <div class="cv-list-body" style="background:${ev.backgroundColor}">
-                <div class="cv-list-time">${inicio.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                <div class="cv-list-time">${fmt(inicio)} - ${fmt(fin)}</div>
                 <div class="cv-list-paciente">${cvEscapeHtml(ev.title)}</div>
                 <div class="cv-list-sub">${cvEscapeHtml(p.consulta || '')} — Dr. ${cvEscapeHtml(p.medico || '')}</div>
                 <div class="cv-list-sub">L: ${cvEscapeHtml(p.agencia || 'Sin asignar')}</div>
