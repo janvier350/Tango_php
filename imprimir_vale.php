@@ -1,16 +1,16 @@
 <?php
 // 1. CABECERA PARA FORZAR UTF-8 (Soluciona tildes en el navegador)
 header('Content-Type: text/html; charset=utf-8');
-// 1. CONFIGURACIÓN DE ZONA HORARIA
+// 1. CONFIGURACI锟�0锟�7N DE ZONA HORARIA
 date_default_timezone_set('America/Guayaquil'); 
 
 require_once 'config.php';
-require_once 'auth.php'; // Necesario para obtener el nombre del usuario de la sesión
+require_once 'auth.php'; // Necesario para obtener el nombre del usuario de la sesi锟斤拷n
 verificar_auth();
 
 $id = $_GET['id'];
 
-// Traemos info del movimiento, proyectos y el nombre del usuario que registró
+// Traemos info del movimiento, proyectos y el nombre del usuario que registr锟斤拷
 $stmt = $conn->prepare("SELECT m.*, r.REPOSICION, p.PROYECTO, u.nombres as nombre_usuario_registro
                         FROM movimientos m 
                         LEFT JOIN CAT_REPOSICION r ON m.inf_fin = r.ID_REPOSICION 
@@ -130,12 +130,12 @@ $fecha_impresion = date('d/m/Y H:i:s');
         <div class="firmas">
             <div class="firma-box">
                 <strong>Entrega Conforme</strong>
-                <span class="nombre-firma"><?php echo htmlspecialchars($val['nombre_usuario_registro'] ?: $_SESSION["user_name"]); ?></span>
+                <span class="nombre-firma"><?php echo htmlspecialchars($val['INTERMEDIARIO2'] ?: 'N/A'); ?></span>
             </div>
-            
+
             <div class="firma-box">
                 <strong>Recibe Conforme</strong>
-                <span class="nombre-firma"><?php echo htmlspecialchars($val['INTERMEDIARIO2']); ?></span>
+                <span class="nombre-firma"><?php echo htmlspecialchars($val['intermediario']); ?></span>
             </div>
         </div>
 
