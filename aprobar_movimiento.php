@@ -7,6 +7,7 @@ verificar_auth();
 $paginas_permitidas = [
     'movimientos.php',
     'movimientos_revisor.php',
+    'validar_movimientos.php',
     'validar_movimientos_401.php',
     'validar_movimientos_403.php',
     'validar_movimientos_general.php',
@@ -14,6 +15,11 @@ $paginas_permitidas = [
 $return = $_GET['return'] ?? 'movimientos.php';
 if (!in_array($return, $paginas_permitidas, true)) {
     $return = 'movimientos.php';
+}
+// La página unificada necesita conservar la oficina consultada
+$extra_params = '';
+if ($return === 'validar_movimientos.php' && isset($_GET['oficina'])) {
+    $extra_params = 'id_oficina=' . intval($_GET['oficina']) . '&';
 }
 
 if (isset($_GET['id'])) {
@@ -25,7 +31,7 @@ if (isset($_GET['id'])) {
     $stmt->bind_param("isi", $id_jefe, $ahora, $id);
 
     if ($stmt->execute()) {
-        header("Location: $return?msg=aprobado");
+        header("Location: $return?{$extra_params}msg=aprobado");
     } else {
         echo "Error al aprobar: " . $conn->error;
     }

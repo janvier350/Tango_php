@@ -46,246 +46,65 @@ if (isset($_SESSION["user_rol"])) {
     
     <div class="container">
         <?php
-        // ACCESO ADMINISTRACION
-        if ($_SESSION["user_rol"] == 4) { ?>
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card bg-success text-white text-center p-4">
-                    <h6 class="fw-bold"> Oficina - 401 </h6>
-                    <?php
-                        // Obtenemos el ID del usuario de la sesi��n
-                        $id_usuario_sesion = 3;
-                        
-                        
-                        // Query para sumar recibidos y restar entregados
-                        $sql_saldo = "SELECT SUM(importe_recibido - importe_entregado) as saldo_total 
-                                      FROM movimientos 
-                                      WHERE ID_USUARIO = ? AND ESTADO = 'A'";
-                        
-                        $stmt_saldo = $conn->prepare($sql_saldo);
-                        $stmt_saldo->bind_param("i", $id_usuario_sesion);
-                        $stmt_saldo->execute();
-                        $resultado_saldo = $stmt_saldo->get_result();
-                        $datos_saldo = $resultado_saldo->fetch_assoc();
-                        
-                        // Guardamos el valor en una variable
-                        $total_caja_usuario_3 = $datos_saldo['saldo_total'] ?? 0;
-                        
-                        $stmt_saldo->close();
-                        ?>
-                    <h2 class="display-5 fw-bold">$<?php echo number_format($total_caja_usuario_3, 2);  ?></h2>
-                    
-                </div>
-            </div>
+        // ACCESO ADMINISTRACION (4) Y CEO (3): tarjetas de cajas dinamicas
+        // Una caja = una oficina con al menos un usuario operativo (rol distinto de ADMIN y CEO).
+        // El saldo se calcula por los movimientos activos de esa oficina.
+        if ($_SESSION["user_rol"] == 4 || $_SESSION["user_rol"] == 3) {
+            $es_ceo = ($_SESSION["user_rol"] == 3);
 
+            $sql_cajas = "SELECT o.ID_OFICINA, o.OFICINA,
+                              SUM(CASE WHEN u.ID_ROL = 2 THEN 1 ELSE 0 END) AS num_recepcion,
+                              COALESCE((SELECT SUM(m.importe_recibido - m.importe_entregado)
+                                        FROM movimientos m
+                                        WHERE m.ID_OFICINA = o.ID_OFICINA AND m.ESTADO = 'A'), 0) AS saldo
+                          FROM CTR_OFICINA o
+                          INNER JOIN usuarios u ON u.ID_CTR_OFICINA = o.ID_OFICINA
+                          WHERE u.ID_ROL NOT IN (1, 3)
+                          GROUP BY o.ID_OFICINA, o.OFICINA
+                          ORDER BY o.OFICINA ASC";
+            $res_cajas = $conn->query($sql_cajas);
+            $cajas = $res_cajas ? $res_cajas->fetch_all(MYSQLI_ASSOC) : [];
+            $total_caja_oficinas = 0;
+        ?>
+        <div class="row g-4 justify-content-center">
+            <?php foreach ($cajas as $caja):
+                $total_caja_oficinas += $caja['saldo'];
+                // Cajas operadas por recepcion en verde; caja de administracion (general) en azul
+                $es_general = ($caja['num_recepcion'] == 0);
+                $color_card = $es_general ? 'bg-primary' : 'bg-success';
+                $titulo_card = $es_general ? 'Caja General' : 'Oficina - ' . $caja['OFICINA'];
+            ?>
             <div class="col-md-4">
-                <div class="card bg-success text-white text-center p-4">
-                    <h6 class="fw-bold">Oficina - 403 </h6>
-                     <?php
-                        // Obtenemos el ID del usuario de la sesi��n
-                        $id_usuario_sesion = 4; 
-                        
-                        // Query para sumar recibidos y restar entregados
-                        $sql_saldo = "SELECT SUM(importe_recibido - importe_entregado) as saldo_total 
-                                      FROM movimientos 
-                                      WHERE ID_USUARIO = ? AND ESTADO = 'A'";
-                        
-                        $stmt_saldo = $conn->prepare($sql_saldo);
-                        $stmt_saldo->bind_param("i", $id_usuario_sesion);
-                        $stmt_saldo->execute();
-                        $resultado_saldo = $stmt_saldo->get_result();
-                        $datos_saldo = $resultado_saldo->fetch_assoc();
-                        
-                        // Guardamos el valor en una variable
-                        $total_caja_usuario_4 = $datos_saldo['saldo_total'] ?? 0;
-                        
-                        $stmt_saldo->close();
-                        ?>
-                    <h2 class="display-5 fw-bold">$<?php echo number_format($total_caja_usuario_4, 2); ?></h2>
+                <div class="card <?php echo $color_card; ?> text-white text-center p-4">
+                    <?php if ($es_ceo): ?><a class="dropdown-item" href="validar_movimientos.php?id_oficina=<?php echo $caja['ID_OFICINA']; ?>"><?php endif; ?>
+                    <h6 class="fw-bold"><?php echo htmlspecialchars($titulo_card); ?></h6>
+                    <h2 class="display-5 fw-bold">$<?php echo number_format($caja['saldo'], 2); ?></h2>
+                    <?php if ($es_ceo): ?></a><?php endif; ?>
                 </div>
             </div>
+            <?php endforeach; ?>
 
-            <div class="col-md-4">
-                <div class="card <?php echo $faltante < 0 ? 'bg-danger' : 'bg-primary'; ?> text-white text-center p-4">
-                    <h6 class="fw-bold">Caja General</h6>
-                    <?php
-                        // Obtenemos el ID del usuario de la sesi��n
-                        $id_usuario_sesion = 2; 
-                        
-                        // Query para sumar recibidos y restar entregados
-                        $sql_saldo = "SELECT SUM(importe_recibido - importe_entregado) as saldo_total 
-                                      FROM movimientos 
-                                      WHERE ID_USUARIO = ? AND ESTADO = 'A'";
-                        
-                        $stmt_saldo = $conn->prepare($sql_saldo);
-                        $stmt_saldo->bind_param("i", $id_usuario_sesion);
-                        $stmt_saldo->execute();
-                        $resultado_saldo = $stmt_saldo->get_result();
-                        $datos_saldo = $resultado_saldo->fetch_assoc();
-                        
-                        // Guardamos el valor en una variable
-                        $total_caja_usuario_2 = $datos_saldo['saldo_total'] ?? 0;
-                        
-                        $stmt_saldo->close();
-                        ?>
-                    <h2 class="display-5 fw-bold">$<?php echo number_format($total_caja_usuario_2, 2); ?></h2>
+            <?php if (empty($cajas)): ?>
+            <div class="col-md-6">
+                <div class="card bg-secondary text-white text-center p-4">
+                    <h6 class="fw-bold">Sin cajas registradas</h6>
+                    <p class="mb-0 small">Asigne una oficina a un usuario operativo para que aparezca su caja.</p>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
         <br>
 
-        <div class="row g-4">
-            
+        <div class="row g-4 justify-content-center">
             <div class="col-md-4">
-                <!--<div class="card bg-dark text-white text-center p-4">
-                     <h6 class="fw-bold">SALDO CONTABLE (Sistema)</h6>
-                    <h2 class="display-5 fw-bold"></h2> 
-                </div>-->
-            </div> 
-             <div class="col-md-4">
                 <div class="card bg-warning text-white text-center p-4">
                     <h6 class="fw-bold">Suma Oficinas</h6>
-                    
-                    <h2 class="display-5 fw-bold">$ <?php 
-                    $total_caja_oficinas = $total_caja_usuario_2 + $total_caja_usuario_4 + $total_caja_usuario_3; 
-                    echo number_format($total_caja_oficinas, 2); 
-                    ?></h2>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-               <!--   <div class="card <?php echo $faltante < 0 ? 'bg-danger' : 'bg-primary'; ?> text-white text-center p-4">
-                  <h6 class="fw-bold">DIFERENCIA (FALTANTE/SOBRANTE)</h6>
-                    <h2 class="display-5 fw-bold">$</h2> 
-                </div> -->
-            </div>
-        </div>
-        <?php
-    } else { ?>
-    
-    <?php
-        // ACCESO CEO
-        if ($_SESSION["user_rol"] == 3) { ?>
-        <div class="row g-4">
-            
-            <div class="col-md-4">
-                <div class="card bg-success text-white text-center p-4">
-                     <a class="dropdown-item" href="validar_movimientos_401.php">  
-                    <h6 class="fw-bold"> Oficina - 401 </h6>
-                    <?php
-                        // Obtenemos el ID del usuario de la sesi��n
-                        $id_usuario_sesion = 3;
-                        
-                        
-                        // Query para sumar recibidos y restar entregados
-                        $sql_saldo = "SELECT SUM(importe_recibido - importe_entregado) as saldo_total 
-                                      FROM movimientos 
-                                      WHERE ID_USUARIO = ? AND ESTADO = 'A'";
-                        
-                        $stmt_saldo = $conn->prepare($sql_saldo);
-                        $stmt_saldo->bind_param("i", $id_usuario_sesion);
-                        $stmt_saldo->execute();
-                        $resultado_saldo = $stmt_saldo->get_result();
-                        $datos_saldo = $resultado_saldo->fetch_assoc();
-                        
-                        // Guardamos el valor en una variable
-                        $total_caja_usuario_3 = $datos_saldo['saldo_total'] ?? 0;
-                        
-                        $stmt_saldo->close();
-                        ?>
-                    <h2 class="display-5 fw-bold">$<?php echo number_format($total_caja_usuario_3, 2);  ?></h2>
-                    </a>
-                </div>
-            </div>
-        
-            <div class="col-md-4">
-                <div class="card bg-success text-white text-center p-4">
-                    <a class="dropdown-item" href="validar_movimientos_403.php">  
-                    <h6 class="fw-bold">Oficina - 403 </h6>
-                     <?php
-                        // Obtenemos el ID del usuario de la sesi��n
-                        $id_usuario_sesion = 4; 
-                        
-                        // Query para sumar recibidos y restar entregados
-                        $sql_saldo = "SELECT SUM(importe_recibido - importe_entregado) as saldo_total 
-                                      FROM movimientos 
-                                      WHERE ID_USUARIO = ? AND ESTADO = 'A'";
-                        
-                        $stmt_saldo = $conn->prepare($sql_saldo);
-                        $stmt_saldo->bind_param("i", $id_usuario_sesion);
-                        $stmt_saldo->execute();
-                        $resultado_saldo = $stmt_saldo->get_result();
-                        $datos_saldo = $resultado_saldo->fetch_assoc();
-                        
-                        // Guardamos el valor en una variable
-                        $total_caja_usuario_4 = $datos_saldo['saldo_total'] ?? 0;
-                        
-                        $stmt_saldo->close();
-                        ?>
-                    <h2 class="display-5 fw-bold">$<?php echo number_format($total_caja_usuario_4, 2); ?></h2>
-                    </a>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card <?php echo $faltante < 0 ? 'bg-danger' : 'bg-primary'; ?> text-white text-center p-4">
-                   <a class="dropdown-item" href="validar_movimientos_general.php">  
-                    <h6 class="fw-bold">Caja General</h6>
-                    <?php
-                        // Obtenemos el ID del usuario de la sesi��n
-                        $id_usuario_sesion = 2; 
-                        
-                        // Query para sumar recibidos y restar entregados
-                        $sql_saldo = "SELECT SUM(importe_recibido - importe_entregado) as saldo_total 
-                                      FROM movimientos 
-                                      WHERE ID_USUARIO = ? AND ESTADO = 'A'";
-                        
-                        $stmt_saldo = $conn->prepare($sql_saldo);
-                        $stmt_saldo->bind_param("i", $id_usuario_sesion);
-                        $stmt_saldo->execute();
-                        $resultado_saldo = $stmt_saldo->get_result();
-                        $datos_saldo = $resultado_saldo->fetch_assoc();
-                        
-                        // Guardamos el valor en una variable
-                        $total_caja_usuario_2 = $datos_saldo['saldo_total'] ?? 0;
-                        
-                        $stmt_saldo->close();
-                        ?>
-                    <h2 class="display-5 fw-bold">$<?php echo number_format($total_caja_usuario_2, 2); ?></h2>
-                       </a>
+                    <h2 class="display-5 fw-bold">$ <?php echo number_format($total_caja_oficinas, 2); ?></h2>
                 </div>
             </div>
         </div>
-        <br>
+        <?php } ?>
 
-        <div class="row g-4">
-            
-            <div class="col-md-4">
-                <!--<div class="card bg-dark text-white text-center p-4">
-                     <h6 class="fw-bold">SALDO CONTABLE (Sistema)</h6>
-                    <h2 class="display-5 fw-bold"></h2> 
-                </div>-->
-            </div> 
-             <div class="col-md-4">
-                <div class="card bg-warning text-white text-center p-4">
-                    <h6 class="fw-bold">Suma Oficinas</h6>
-                    
-                    <h2 class="display-5 fw-bold">$ <?php 
-                    $total_caja_oficinas = $total_caja_usuario_2 + $total_caja_usuario_4 + $total_caja_usuario_3; 
-                    echo number_format($total_caja_oficinas, 2); 
-                    ?></h2>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-               <!--   <div class="card <?php echo $faltante < 0 ? 'bg-danger' : 'bg-primary'; ?> text-white text-center p-4">
-                  <h6 class="fw-bold">DIFERENCIA (FALTANTE/SOBRANTE)</h6>
-                    <h2 class="display-5 fw-bold">$</h2> 
-                </div> -->
-            </div>
-        </div>
-        <?php
-    } ?>
     
     
     
@@ -341,9 +160,6 @@ if (isset($_SESSION["user_rol"])) {
         
         
   
-    <?php
-    }
-    ?>
     
         <div class="text-center mt-5">
            
