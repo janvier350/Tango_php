@@ -13,12 +13,9 @@
         
         <a class="nav-link px-3" href="index.php"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
         <a class="nav-link px-3" href="movimientos.php"><i class="bi bi-journal-text me-1"></i> Movimientos</a>
-        <a class="nav-link px-3" href="control/menu.php"><i class="bi bi-journal-text me-1"></i> menu-control</a>
-        <a class="nav-link px-3" href="#vales.php"><i class="bi bi-ticket-perforated me-1"></i> Vales</a>
-        
+
         <a class="nav-link px-3 text-warning fw-bold" href="#arqueo.php"><i class="bi bi-calculator me-1"></i> Arqueo</a>
-        
-        <a class="nav-link px-3" href="#reportes.php"><i class="bi bi-graph-up me-1"></i> Reportes</a>
+
         <a class="nav-link px-3" href="glosario_inf_financiera.php"><i class="bi bi-journal-text me-1"></i> Glosario Inf. Financiera</a>
        <!-- <a class="nav-link px-3" href="usuarios.php"><i class="bi bi-people me-1"></i> Usuarios</a> -->
         
