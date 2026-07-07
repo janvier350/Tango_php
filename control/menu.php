@@ -3,16 +3,22 @@ require_once '../config.php';
 require_once '../auth.php';
 verificar_auth();
 
-// 1. Saldo Te贸rico (Sistema)
-$res_sis = $conn->query("SELECT SUM(CASE WHEN tipo='Ingreso' THEN monto ELSE -monto END) as saldo FROM movimientos");
-$saldo_sistema = $res_sis->fetch_assoc()['saldo'] ?? 0;
-
-// 2. 脷ltimo Efectivo Real (Arqueo)
-$res_arq = $conn->query("SELECT * FROM arqueos ORDER BY fecha DESC LIMIT 1");
-$ultimo_arqueo = $res_arq->fetch_assoc();
-$efectivo_real = $ultimo_arqueo['total_efectivo_real'] ?? 0;
-$faltante = $efectivo_real - $saldo_sistema;
-
+// Tarjetas de cajas dinámicas (mismo criterio que index.php):
+// una caja = una oficina con al menos un usuario operativo (rol distinto de ADMIN y CEO).
+// El saldo se calcula por los movimientos activos de esa oficina.
+$sql_cajas = "SELECT o.ID_OFICINA, o.OFICINA,
+                  SUM(CASE WHEN u.ID_ROL = 2 THEN 1 ELSE 0 END) AS num_recepcion,
+                  COALESCE((SELECT SUM(m.importe_recibido - m.importe_entregado)
+                            FROM movimientos m
+                            WHERE m.ID_OFICINA = o.ID_OFICINA AND m.ESTADO = 'A'), 0) AS saldo
+              FROM CTR_OFICINA o
+              INNER JOIN usuarios u ON u.ID_CTR_OFICINA = o.ID_OFICINA
+              WHERE u.ID_ROL NOT IN (1, 3)
+              GROUP BY o.ID_OFICINA, o.OFICINA
+              ORDER BY o.OFICINA ASC";
+$res_cajas = $conn->query($sql_cajas);
+$cajas = $res_cajas ? $res_cajas->fetch_all(MYSQLI_ASSOC) : [];
+$total_caja_oficinas = 0;
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -24,68 +30,58 @@ $faltante = $efectivo_real - $saldo_sistema;
     <link rel="stylesheet" href="../estilos.css">
 </head>
 <body>
-    
-  <?php
-// Asegúrate de que la sesión esté iniciada antes de usar $_SESSION
-// session_start(); // (si no está ya en tu código)
 
-if (isset($_SESSION["user_rol"])) {
-    if ($_SESSION["user_rol"] == 4) {
-        include '../navbar_control.php';
-    } elseif ($_SESSION["user_rol"] == 2) {
-        include '../navbar.php';
-    } else {
-        // Opcional: un navbar por defecto para otros roles (1, 3, etc.)
-        include '../navbar.php';
-    }
+  <?php
+if (isset($_SESSION["user_rol"]) && $_SESSION["user_rol"] == 4) {
+    include '../navbar_control.php';
 } else {
-    // Si no hay rol definido, puedes redirigir o mostrar un navbar genérico
-    include 'navbar.php';
+    include '../navbar.php';
 }
 ?>
-    
+
     <div class="container">
-        <div class="row g-4">
+        <div class="row g-4 justify-content-center">
+            <?php foreach ($cajas as $caja):
+                $total_caja_oficinas += $caja['saldo'];
+                // Cajas operadas por recepcion en verde; caja de administracion (general) en azul
+                $es_general = ($caja['num_recepcion'] == 0);
+                $color_card = $es_general ? 'bg-primary' : 'bg-success';
+                $titulo_card = $es_general ? 'Caja General' : 'Oficina - ' . $caja['OFICINA'];
+            ?>
             <div class="col-md-4">
-                <div class="card bg-success text-white text-center p-4">
-                    
-                     <a class="dropdown-item" href="control_movimientos_401.php">
-                         <h6 class="fw-bold">401</h6>
-                         ROL: <?php echo $_SESSION["oficina"]; ?>
-                         <h2 class="display-5 fw-bold">$<?php echo number_format($efectivo_real, 2); ?>
-                         </a>
-                    
-                    </h2>
+                <div class="card <?php echo $color_card; ?> text-white text-center p-4">
+                    <a class="dropdown-item" href="../validar_movimientos.php?id_oficina=<?php echo $caja['ID_OFICINA']; ?>">
+                    <h6 class="fw-bold"><?php echo htmlspecialchars($titulo_card); ?></h6>
+                    <h2 class="display-5 fw-bold">$<?php echo number_format($caja['saldo'], 2); ?></h2>
+                    </a>
                 </div>
             </div>
+            <?php endforeach; ?>
 
-            <div class="col-md-4">
-                <div class="card bg-dark text-white text-center p-4">
-                    
-                    <a class="dropdown-item" href="control_movimientos_403.php">
-                        <h6 class="fw-bold">403</h6>
-                        ROL: <?php echo $_SESSION["oficina"]; ?>
-                        <h2 class="display-5 fw-bold">$<?php echo number_format($saldo_sistema, 2); ?></h2>
-                        </a>
-                    
+            <?php if (empty($cajas)): ?>
+            <div class="col-md-6">
+                <div class="card bg-secondary text-white text-center p-4">
+                    <h6 class="fw-bold">Sin cajas registradas</h6>
+                    <p class="mb-0 small">Asigne una oficina a un usuario operativo para que aparezca su caja.</p>
                 </div>
             </div>
+            <?php endif; ?>
+        </div>
+        <br>
 
+        <div class="row g-4 justify-content-center">
             <div class="col-md-4">
-                <div class="card <?php echo $faltante < 0 ? 'bg-danger' : 'bg-primary'; ?> text-white text-center p-4">
-                    <h6 class="fw-bold">DASHBOARD</h6>
-                    <h2 class="display-5 fw-bold">$<?php echo number_format($faltante, 2); ?></h2>
+                <div class="card bg-warning text-white text-center p-4">
+                    <h6 class="fw-bold">Suma Oficinas</h6>
+                    <h2 class="display-5 fw-bold">$ <?php echo number_format($total_caja_oficinas, 2); ?></h2>
                 </div>
             </div>
         </div>
-        
+
         <div class="text-center mt-5">
-            <!--<a href="arqueo.php" class="btn btn-outline-dark btn-lg fw-bold">REALIZAR NUEVO ARQUEO DE CAJA</a> -->
             <a class="dropdown-item" href="#">Usuario: <?php echo $_SESSION["user_name"]; ?></a>
-            <!--<a class="dropdown-item" href="#">id: <?php echo $_SESSION["user_id"]; ?></a> -->
-            <!-- <a class="dropdown-item" href="#">ROL-id: <?php echo $_SESSION["user_rol"]; ?></a> -->
-            <a class="dropdown-item" href="#">ROL: <?php echo $_SESSION["oficina"]; ?></a>
-            <a class="dropdown-item" href="#">OFICINA: <?php echo $_SESSION["oficina_ROL"]; ?></a>
+            <a class="dropdown-item" href="#">ROL: <?php echo $_SESSION["oficina_ROL"]; ?></a>
+            <a class="dropdown-item" href="#">OFICINA: <?php echo $_SESSION["oficina"]; ?></a>
         </div>
     </div>
 </body>

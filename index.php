@@ -50,7 +50,8 @@ if (isset($_SESSION["user_rol"])) {
         // Una caja = una oficina con al menos un usuario operativo (rol distinto de ADMIN y CEO).
         // El saldo se calcula por los movimientos activos de esa oficina.
         if ($_SESSION["user_rol"] == 4 || $_SESSION["user_rol"] == 3) {
-            $es_ceo = ($_SESSION["user_rol"] == 3);
+            // CEO y Administracion validan las cajas: ambos con enlace a la validacion
+            $puede_validar = true;
 
             $sql_cajas = "SELECT o.ID_OFICINA, o.OFICINA,
                               SUM(CASE WHEN u.ID_ROL = 2 THEN 1 ELSE 0 END) AS num_recepcion,
@@ -76,10 +77,10 @@ if (isset($_SESSION["user_rol"])) {
             ?>
             <div class="col-md-4">
                 <div class="card <?php echo $color_card; ?> text-white text-center p-4">
-                    <?php if ($es_ceo): ?><a class="dropdown-item" href="validar_movimientos.php?id_oficina=<?php echo $caja['ID_OFICINA']; ?>"><?php endif; ?>
+                    <?php if ($puede_validar): ?><a class="dropdown-item" href="validar_movimientos.php?id_oficina=<?php echo $caja['ID_OFICINA']; ?>"><?php endif; ?>
                     <h6 class="fw-bold"><?php echo htmlspecialchars($titulo_card); ?></h6>
                     <h2 class="display-5 fw-bold">$<?php echo number_format($caja['saldo'], 2); ?></h2>
-                    <?php if ($es_ceo): ?></a><?php endif; ?>
+                    <?php if ($puede_validar): ?></a><?php endif; ?>
                 </div>
             </div>
             <?php endforeach; ?>
