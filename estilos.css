@@ -49,3 +49,60 @@ body {
 .login-card {
     border-top: 5px solid var(--primary-color) !important;
 }
+
+/* ============================================================
+   RESPONSIVE / MÓVIL
+   Ajustes para que la app se vea bien en teléfonos.
+   ============================================================ */
+
+/* El menú desplegado (hamburguesa) no debe crecer más que la pantalla:
+   si tiene muchas opciones, se puede desplazar dentro del propio menú. */
+@media (max-width: 991.98px) {
+    .navbar-collapse {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    /* Separación cómoda entre opciones del menú al estar apiladas */
+    .navbar-nav .nav-link {
+        padding-top: .5rem !important;
+        padding-bottom: .5rem !important;
+    }
+    .navbar-nav .nav-link.ms-lg-3 {
+        margin-left: 0 !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    /* Márgenes laterales más ajustados para aprovechar el ancho del teléfono */
+    .container-fluid.px-4 {
+        padding-left: .75rem !important;
+        padding-right: .75rem !important;
+    }
+
+    /* Los campos de formulario y botones cómodos para el dedo (evita el
+       zoom automático de iOS al enfocar inputs con fuente < 16px) */
+    .form-control,
+    .form-select,
+    .form-control-sm,
+    .form-select-sm {
+        font-size: 16px !important;
+    }
+
+    /* Tablas grandes: permitir desplazamiento horizontal en vez de romper
+       el diseño de la página */
+    .table-responsive-movil {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Barra de información del usuario: apilar en lugar de desbordar */
+    .bg-white.d-flex.gap-3 {
+        flex-wrap: wrap;
+        gap: .5rem !important;
+    }
+}
+
+/* El buscador Select2 debe respetar el ancho del contenedor en móvil */
+.select2-container {
+    max-width: 100%;
+}
