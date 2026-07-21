@@ -33,6 +33,7 @@ $fecha_impresion = date('d/m/Y H:i:s');
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <title>Vale #<?php echo $id; ?></title>
     <style>
