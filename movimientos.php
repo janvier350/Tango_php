@@ -231,8 +231,14 @@ $f_texto  = $_GET['f_texto']  ?? '';
                     </div>
                     
                     <div class="col-md-2">
-                        <label class="small fw-bold">Empresa</label>
-                        <select name="emp" class="form-select form-select-sm">
+                        <label class="small fw-bold d-flex align-items-center gap-1">Empresa
+                            <button type="button" class="btn btn-success btn-sm py-0 px-1 lh-1" style="font-size:0.75rem;"
+                                data-bs-toggle="modal" data-bs-target="#modalNuevaEmpresa"
+                                title="Agregar nueva empresa">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </label>
+                        <select name="emp" id="sel_empresa" class="form-select form-select-sm select2-buscable">
                             <?php $res = $conn->query("SELECT nombre FROM cat_empresas"); while($e = $res->fetch_assoc()) echo "<option>{$e['nombre']}</option>"; ?>
                         </select>
                     </div>
@@ -598,6 +604,32 @@ $f_texto  = $_GET['f_texto']  ?? '';
   </div>
 </div>
 
+<!-- Modal: Nueva Empresa -->
+<div class="modal fade" id="modalNuevaEmpresa" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2 bg-dark text-white">
+        <h6 class="modal-title mb-0"><i class="bi bi-building me-2"></i>Nueva Empresa</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label small fw-bold">Nombre de la Empresa</label>
+          <input type="text" id="ne_nombre" class="form-control form-control-sm text-uppercase"
+                 placeholder="Ej: BUADNET..." autocomplete="off">
+          <div id="ne_feedback" class="form-text mt-1"></div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="ne_guardar" class="btn btn-dark btn-sm">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Nueva Inf. Financiera -->
 <div class="modal fade" id="modalNuevaInfFin" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
@@ -941,6 +973,68 @@ $(document).ready(function() {
             }
         }, 'json').fail(function() {
             $('#nb2_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+            alert('Error de conexión. Intenta nuevamente.');
+        });
+    });
+
+    // --- Modal Nueva Empresa ---
+    var checkTimerEmpresa;
+
+    $('#modalNuevaEmpresa').on('show.bs.modal', function() {
+        $('#ne_nombre').val('').removeClass('is-valid is-invalid');
+        $('#ne_feedback').text('').removeClass('text-success text-danger');
+        $('#ne_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+    });
+    $('#modalNuevaEmpresa').on('shown.bs.modal', function() { $('#ne_nombre').focus(); });
+
+    $('#ne_nombre').on('input', function() {
+        var val = $(this).val().trim();
+        clearTimeout(checkTimerEmpresa);
+        $(this).removeClass('is-valid is-invalid');
+        $('#ne_feedback').text('').removeClass('text-success text-danger');
+        if (val.length < 2) return;
+        checkTimerEmpresa = setTimeout(function() {
+            $.post('ajax_empresa.php', { action: 'check', nombre: val }, function(res) {
+                if (res.exists) {
+                    $('#ne_nombre').addClass('is-invalid');
+                    $('#ne_feedback').text('⚠ Ya existe una empresa con ese nombre.').addClass('text-danger');
+                } else {
+                    $('#ne_nombre').addClass('is-valid');
+                    $('#ne_feedback').text('✓ Disponible.').addClass('text-success');
+                }
+            }, 'json');
+        }, 500);
+    });
+
+    $('#ne_guardar').on('click', function() {
+        var nombre = $('#ne_nombre').val().trim();
+        if (nombre.length < 2) {
+            $('#ne_nombre').addClass('is-invalid');
+            $('#ne_feedback').text('Ingresa el nombre de la empresa.').addClass('text-danger');
+            return;
+        }
+        if ($('#ne_nombre').hasClass('is-invalid')) return;
+
+        $('#ne_guardar').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+        $.post('ajax_empresa.php', { action: 'crear', nombre: nombre }, function(res) {
+            if (res.success) {
+                // Agregar como <option> al select de empresas y seleccionarlo
+                $('#sel_empresa').append('<option value="'+res.nombre+'">'+res.nombre+'</option>');
+                $('#sel_empresa').val(res.nombre).trigger('change');
+
+                bootstrap.Modal.getInstance(document.getElementById('modalNuevaEmpresa')).hide();
+
+                var toast = $('<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999"><div class="toast show align-items-center text-bg-dark border-0"><div class="d-flex"><div class="toast-body"><i class="bi bi-check-circle me-2"></i>Empresa creada y seleccionada.</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div></div>');
+                $('body').append(toast);
+                setTimeout(function() { toast.remove(); }, 3000);
+            } else {
+                $('#ne_nombre').addClass('is-invalid');
+                $('#ne_feedback').text(res.msg).addClass('text-danger');
+                $('#ne_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+            }
+        }, 'json').fail(function() {
+            $('#ne_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
             alert('Error de conexión. Intenta nuevamente.');
         });
     });
