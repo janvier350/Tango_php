@@ -15,7 +15,8 @@
         
         <a class="nav-link px-3" href="index.php"><i class="bi bi-people me-1"></i> Home</a> 
         <?php if($_SESSION['user_rol'] == 2): ?>
-        <a class="nav-link px-3" href="movimientos.php"><i class="bi bi-journal-text me-1"></i> Movimientos</a>
+        <?php $mov_link = !empty($_SESSION['oficina_independiente']) ? 'movimientos_mensajeria.php' : 'movimientos.php'; ?>
+        <a class="nav-link px-3" href="<?php echo $mov_link; ?>"><i class="bi bi-journal-text me-1"></i> Movimientos</a>
         <a class="nav-link px-3 text-warning fw-bold" href="arqueo.php"><i class="bi bi-calculator me-1"></i> Arqueo</a>
         <a class="nav-link px-3" href="glosario_inf_financiera.php"><i class="bi bi-journal-text me-1"></i> Glosario Inf. Financiera</a>
         <?php endif; ?>
