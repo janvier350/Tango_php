@@ -12,6 +12,19 @@ function verificar_auth() {
 }
 
 /**
+ * Indica si una columna existe en una tabla (para despliegues seguros
+ * mientras un ALTER TABLE aun no se ha ejecutado en la base).
+ */
+function col_existe($conn, $tabla, $col) {
+    $t = $conn->real_escape_string($tabla);
+    $c = $conn->real_escape_string($col);
+    $r = $conn->query("SELECT 1 FROM information_schema.COLUMNS
+                       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '$t'
+                       AND COLUMN_NAME = '$c' LIMIT 1");
+    return $r && $r->num_rows > 0;
+}
+
+/**
  * Redirecci��n inteligente al iniciar sesi��n.
  * Rol 1: Administrador -> Va al Dashboard o Index principal.
  * Rol 2: Usuario -> Va directo a Movimientos.

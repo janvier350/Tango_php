@@ -54,7 +54,11 @@ if (isset($_SESSION["user_rol"])) {
             // CEO y Administracion validan las cajas: ambos con enlace a la validacion
             $puede_validar = true;
 
-            $sql_cajas = "SELECT o.ID_OFICINA, o.OFICINA,
+            // La columna ES_INDEPENDIENTE puede no existir aun (despliegue seguro)
+            $tiene_indep = col_existe($conn, 'CTR_OFICINA', 'ES_INDEPENDIENTE');
+            $col_indep   = $tiene_indep ? 'o.ES_INDEPENDIENTE' : '0';
+
+            $sql_cajas = "SELECT o.ID_OFICINA, o.OFICINA, $col_indep AS es_independiente,
                               SUM(CASE WHEN u.ID_ROL = 2 THEN 1 ELSE 0 END) AS num_recepcion,
                               COALESCE((SELECT SUM(m.importe_recibido - m.importe_entregado)
                                         FROM movimientos m
@@ -62,10 +66,14 @@ if (isset($_SESSION["user_rol"])) {
                           FROM CTR_OFICINA o
                           INNER JOIN usuarios u ON u.ID_CTR_OFICINA = o.ID_OFICINA
                           WHERE u.ID_ROL NOT IN (1, 3)
-                          GROUP BY o.ID_OFICINA, o.OFICINA
-                          ORDER BY o.OFICINA ASC";
+                          GROUP BY o.ID_OFICINA, o.OFICINA, es_independiente
+                          ORDER BY es_independiente ASC, o.OFICINA ASC";
             $res_cajas = $conn->query($sql_cajas);
-            $cajas = $res_cajas ? $res_cajas->fetch_all(MYSQLI_ASSOC) : [];
+            $cajas_all = $res_cajas ? $res_cajas->fetch_all(MYSQLI_ASSOC) : [];
+
+            // Separar cajas normales (se suman) de las independientes (no se suman)
+            $cajas = array_filter($cajas_all, fn($c) => !$c['es_independiente']);
+            $cajas_indep = array_filter($cajas_all, fn($c) => $c['es_independiente']);
             $total_caja_oficinas = 0;
         ?>
         <div class="row g-4 justify-content-center">
@@ -105,6 +113,27 @@ if (isset($_SESSION["user_rol"])) {
                 </div>
             </div>
         </div>
+
+        <?php if (!empty($cajas_indep)): ?>
+        <hr class="my-4">
+        <p class="text-center text-muted small mb-3">
+            <i class="bi bi-box-arrow-right me-1"></i>Cajas independientes (no se suman al total)
+        </p>
+        <div class="row g-4 justify-content-center">
+            <?php foreach ($cajas_indep as $caja): ?>
+            <div class="col-md-4">
+                <div class="card bg-dark text-white text-center p-4">
+                    <?php if ($puede_validar): ?><a class="dropdown-item" href="validar_movimientos.php?id_oficina=<?php echo $caja['ID_OFICINA']; ?>"><?php endif; ?>
+                    <h6 class="fw-bold"><?php echo htmlspecialchars($caja['OFICINA']); ?>
+                        <span class="badge bg-secondary ms-1" style="font-size:.6rem;">independiente</span>
+                    </h6>
+                    <h2 class="display-5 fw-bold">$<?php echo number_format($caja['saldo'], 2); ?></h2>
+                    <?php if ($puede_validar): ?></a><?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
         <?php } ?>
 
     
@@ -159,10 +188,41 @@ if (isset($_SESSION["user_rol"])) {
         </div>
         
        <?php } ?>
-        
-        
-  
-    
+
+    <?php
+    // ACCESO VALIDACION 403: el operador de la oficina 403 tambien valida
+    // las cajas independientes (ej. Caja Mensajeria).
+    if ($_SESSION["user_rol"] == 2 && strtoupper(trim($_SESSION["oficina"])) === '403'
+        && col_existe($conn, 'CTR_OFICINA', 'ES_INDEPENDIENTE')) {
+        $res_ind = $conn->query("SELECT o.ID_OFICINA, o.OFICINA,
+                                    COALESCE((SELECT SUM(m.importe_recibido - m.importe_entregado)
+                                              FROM movimientos m
+                                              WHERE m.ID_OFICINA = o.ID_OFICINA AND m.ESTADO='A'),0) AS saldo
+                                 FROM CTR_OFICINA o
+                                 WHERE o.ES_INDEPENDIENTE = 1 ORDER BY o.OFICINA");
+        $cajas_ind_403 = $res_ind ? $res_ind->fetch_all(MYSQLI_ASSOC) : [];
+        if (!empty($cajas_ind_403)): ?>
+        <hr class="my-4">
+        <p class="text-center text-muted small mb-3">
+            <i class="bi bi-check2-square me-1"></i>Cajas que validas
+        </p>
+        <div class="row g-4 justify-content-center">
+            <?php foreach ($cajas_ind_403 as $caja): ?>
+            <div class="col-md-4">
+                <div class="card bg-dark text-white text-center p-4">
+                    <a class="dropdown-item" href="validar_movimientos.php?id_oficina=<?php echo $caja['ID_OFICINA']; ?>">
+                    <h6 class="fw-bold"><?php echo htmlspecialchars($caja['OFICINA']); ?>
+                        <span class="badge bg-secondary ms-1" style="font-size:.6rem;">validar</span>
+                    </h6>
+                    <h2 class="display-5 fw-bold">$<?php echo number_format($caja['saldo'], 2); ?></h2>
+                    </a>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif;
+    } ?>
+
         <div class="text-center mt-5">
            
             <!-- <a href="arqueo.php" class="btn btn-outline-dark btn-lg fw-bold">REALIZAR NUEVO ARQUEO DE CAJA</a> -->

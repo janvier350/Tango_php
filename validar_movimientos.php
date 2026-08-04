@@ -9,7 +9,9 @@ $id_rol = $_SESSION["user_rol"];
 
 // Oficina (caja) a validar, recibida por parametro
 $id_oficina = intval($_GET['id_oficina'] ?? 0);
-$stmt_ofi = $conn->prepare("SELECT OFICINA FROM CTR_OFICINA WHERE ID_OFICINA = ?");
+$tiene_indep = col_existe($conn, 'CTR_OFICINA', 'ES_INDEPENDIENTE');
+$sel_indep   = $tiene_indep ? 'ES_INDEPENDIENTE' : '0 AS ES_INDEPENDIENTE';
+$stmt_ofi = $conn->prepare("SELECT OFICINA, $sel_indep FROM CTR_OFICINA WHERE ID_OFICINA = ?");
 $stmt_ofi->bind_param("i", $id_oficina);
 $stmt_ofi->execute();
 $ofi_row = $stmt_ofi->get_result()->fetch_assoc();
@@ -18,6 +20,12 @@ if (!$ofi_row) {
     exit;
 }
 $nombre_oficina_caja = $ofi_row['OFICINA'];
+$caja_es_independiente = (int)($ofi_row['ES_INDEPENDIENTE'] ?? 0);
+
+// Quien puede aprobar: CEO (3) y Administracion (4) siempre;
+// ademas, el operador de la oficina 403 puede aprobar las cajas independientes.
+$puede_aprobar = in_array($id_rol, [3, 4])
+    || ($id_rol == 2 && strtoupper(trim($_SESSION["oficina"])) === '403' && $caja_es_independiente);
 
 // Asegurar que la conexi��n use UTF-8 para evitar caracteres extra�0�9os
 $conn->set_charset("utf8");
@@ -275,9 +283,9 @@ $(document).ready(function() {
                 <span class="badge bg-success" title="Revisado el: <?php echo $m['FECHA_REVISION']; ?>">
                     <i class="bi bi-check-all"></i> Aprobado
                 </span>
-            <?php elseif ($_SESSION["user_rol"] == 3 || $_SESSION["user_rol"] == 4): ?> 
+            <?php elseif ($puede_aprobar): ?>
                 <a href="aprobar_movimiento.php?id=<?php echo $m['id']; ?>&return=validar_movimientos.php&oficina=<?php echo $id_oficina; ?>"
-                   class="btn btn-sm btn-outline-success" 
+                   class="btn btn-sm btn-outline-success"
                    onclick="return confirm('�0�7Confirmar revisi��n de este movimiento?');">
                     <i class="bi bi-check-circle"></i> Aprobar
                 </a>

@@ -19,6 +19,7 @@ if (isset($_POST['login'])) {
             $_SESSION['oficina'] = $user['OFICINA']; //  oficina
             $_SESSION['oficina_ROL'] = $user['ROL']; //
             $_SESSION['oficina_ID'] = $user['ID_CTR_OFICINA']; //
+            $_SESSION['oficina_independiente'] = isset($user['ES_INDEPENDIENTE']) ? (int)$user['ES_INDEPENDIENTE'] : 0;
             header("Location: index.php");
             exit;
         } else { $error = "Contraseña incorrecta"; }
