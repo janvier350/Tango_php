@@ -14,6 +14,13 @@ $m = $stmt->get_result()->fetch_assoc();
 
 if (!$m) { die("Acceso denegado o registro no encontrado."); }
 
+// No se puede editar un movimiento ya aprobado o anulado (defensa server-side)
+if ($m['ID_USUARIO_REVISA'] > 0 || $m['ESTADO'] === 'I') {
+    $destino = !empty($_SESSION['oficina_independiente']) ? 'movimientos_mensajeria.php' : 'movimientos.php';
+    header("Location: $destino?msg=no_editable");
+    exit;
+}
+
 // 2. LÓGICA DE ACTUALIZACIÓN
 if (isset($_POST['update_mov'])) {
     $periodo = date("Y-n", strtotime($_POST['f']));
@@ -37,7 +44,8 @@ if (isset($_POST['update_mov'])) {
     );
 
     if ($stmt_up->execute()) {
-        header("Location: movimientos.php?msg=editado");
+        $destino = !empty($_SESSION['oficina_independiente']) ? 'movimientos_mensajeria.php' : 'movimientos.php';
+        header("Location: $destino?msg=editado");
         exit();
     } else {
         $error = "Error al actualizar: " . $conn->error;
