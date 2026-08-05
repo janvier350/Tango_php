@@ -199,14 +199,15 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                         <th>#</th><th>FECHA</th><th>CUENTA</th><th>CONCEPTO</th>
                         <th>PROVEEDOR</th><th>DOC.</th>
                         <th>INGRESO (+)</th><th>GASTO (-)</th><th class="table-primary">SALDO</th>
-                        <th>ESTADO</th>
+                        <th>ESTADO</th><th>ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php
                 $saldo = 0;
                 foreach ($movs as $m):
-                    $anulado = ($m['ESTADO'] == 'I');
+                    $anulado  = ($m['ESTADO'] == 'I');
+                    $aprobado = ($m['ID_USUARIO_REVISA'] > 0);
                     if (!$anulado) $saldo += ($m['importe_recibido'] - $m['importe_entregado']);
                 ?>
                     <tr style="<?php echo $anulado ? 'background:#f8d7da;opacity:.6;text-decoration:line-through;' : ''; ?>">
@@ -220,7 +221,7 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                         <td class="text-end text-danger"><?php echo $m['importe_entregado'] > 0 ? '$'.number_format($m['importe_entregado'],2) : '-'; ?></td>
                         <td class="text-end fw-bold bg-light <?php echo $saldo>=0?'text-success':'text-danger'; ?>">$<?php echo number_format($saldo,2); ?></td>
                         <td class="text-center">
-                            <?php if ($m['ID_USUARIO_REVISA'] > 0): ?>
+                            <?php if ($aprobado): ?>
                                 <span class="badge bg-success"><i class="bi bi-check-all"></i> Aprobado</span>
                             <?php elseif ($anulado): ?>
                                 <span class="badge bg-danger">Anulado</span>
@@ -228,10 +229,33 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                                 <span class="text-muted small"><i>Pendiente</i></span>
                             <?php endif; ?>
                         </td>
+                        <td class="text-center">
+                            <div class="btn-group" role="group">
+                                <a href="imprimir_vale.php?id=<?php echo $m['id']; ?>" target="_blank" title="Ver PDF"
+                                   class="btn btn-outline-primary btn-sm <?php echo $anulado ? 'disabled' : ''; ?>">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </a>
+                                <?php if (!$aprobado && !$anulado): ?>
+                                <a href="editar_movimiento.php?id=<?php echo $m['id']; ?>" title="Editar"
+                                   class="btn btn-outline-warning btn-sm">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <a href="anular_movimiento.php?id=<?php echo $m['id']; ?>&return=movimientos_mensajeria.php"
+                                   title="Anular" class="btn btn-outline-danger btn-sm"
+                                   onclick="return confirm('¿Seguro de ANULAR este registro? El valor ya no contará en el saldo.');">
+                                    <i class="bi bi-x-circle"></i>
+                                </a>
+                                <?php elseif ($aprobado): ?>
+                                <span class="btn btn-sm btn-light disabled" title="Aprobado: no editable">
+                                    <i class="bi bi-lock-fill text-muted"></i>
+                                </span>
+                                <?php endif; ?>
+                            </div>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (empty($movs)): ?>
-                    <tr><td colspan="10" class="text-center text-muted py-3">Aún no hay movimientos en esta caja.</td></tr>
+                    <tr><td colspan="11" class="text-center text-muted py-3">Aún no hay movimientos en esta caja.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
