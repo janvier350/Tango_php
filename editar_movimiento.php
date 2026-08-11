@@ -16,7 +16,15 @@ if (!$m) { die("Acceso denegado o registro no encontrado."); }
 
 // ¿El usuario opera una caja independiente (ej. Caja Mensajería)?
 // En ese caso mostramos el formulario simplificado, igual al de registro.
+// Se recalcula desde CTR_OFICINA (no solo desde la sesión, que puede estar
+// desactualizada) para que coincida con movimientos_mensajeria.php.
 $es_indep = !empty($_SESSION['oficina_independiente']);
+$id_oficina_actual = intval($_SESSION['oficina_ID'] ?? 0);
+if (!$es_indep && $id_oficina_actual > 0 && col_existe($conn, 'CTR_OFICINA', 'ES_INDEPENDIENTE')) {
+    $r_ind = $conn->query("SELECT ES_INDEPENDIENTE FROM CTR_OFICINA WHERE ID_OFICINA = " . $id_oficina_actual);
+    $es_indep = $r_ind ? (int)($r_ind->fetch_assoc()['ES_INDEPENDIENTE'] ?? 0) : 0;
+}
+$es_indep = (bool)$es_indep;
 
 // No se puede editar un movimiento ya aprobado o anulado (defensa server-side)
 if ($m['ID_USUARIO_REVISA'] > 0 || $m['ESTADO'] === 'I') {
@@ -132,13 +140,7 @@ if ($es_indep) {
                     </div>
 
                     <div class="col-md-3">
-                        <label class="small fw-bold d-flex align-items-center gap-1">Empresa
-                            <button type="button" class="btn btn-success btn-sm py-0 px-1 lh-1" style="font-size:0.75rem;"
-                                data-bs-toggle="modal" data-bs-target="#modalNuevaEmpresa"
-                                title="Agregar nueva empresa">
-                                <i class="bi bi-plus-lg"></i>
-                            </button>
-                        </label>
+                        <label class="small fw-bold">Empresa</label>
                         <select name="emp" id="sel_empresa" class="form-select form-select-sm select2-buscable">
                             <option value="">— Seleccionar —</option>
                             <?php foreach ($empresas_men as $e):
@@ -300,34 +302,6 @@ if ($es_indep) {
         </div>
     </div>
 
-<?php if ($es_indep): ?>
-<!-- Modal: Nueva Empresa (igual que en la caja de mensajería) -->
-<div class="modal fade" id="modalNuevaEmpresa" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header py-2 bg-dark text-white">
-        <h6 class="modal-title mb-0"><i class="bi bi-building me-2"></i>Nueva Empresa</h6>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-2">
-          <label class="form-label small fw-bold">Nombre de la Empresa</label>
-          <input type="text" id="ne_nombre" class="form-control form-control-sm text-uppercase"
-                 placeholder="Ej: BUADNET..." autocomplete="off">
-          <div id="ne_feedback" class="form-text mt-1"></div>
-        </div>
-      </div>
-      <div class="modal-footer py-2">
-        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" id="ne_guardar" class="btn btn-dark btn-sm">
-          <i class="bi bi-check-lg me-1"></i>Guardar
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-<?php endif; ?>
-
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -336,59 +310,6 @@ if ($es_indep) {
             $('.buscable').select2({ theme: "classic", width: '100%' });
 <?php if ($es_indep): ?>
             $('.select2-buscable').select2({ placeholder: "Buscar empresa...", allowClear: true, width: '100%', theme: "classic" });
-
-            // --- Modal Nueva Empresa ---
-            var checkTimerEmpresa;
-            $('#modalNuevaEmpresa').on('show.bs.modal', function() {
-                $('#ne_nombre').val('').removeClass('is-valid is-invalid');
-                $('#ne_feedback').text('').removeClass('text-success text-danger');
-                $('#ne_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
-            });
-            $('#modalNuevaEmpresa').on('shown.bs.modal', function() { $('#ne_nombre').focus(); });
-
-            $('#ne_nombre').on('input', function() {
-                var val = $(this).val().trim();
-                clearTimeout(checkTimerEmpresa);
-                $(this).removeClass('is-valid is-invalid');
-                $('#ne_feedback').text('').removeClass('text-success text-danger');
-                if (val.length < 2) return;
-                checkTimerEmpresa = setTimeout(function() {
-                    $.post('ajax_empresa.php', { action: 'check', nombre: val }, function(res) {
-                        if (res.exists) {
-                            $('#ne_nombre').addClass('is-invalid');
-                            $('#ne_feedback').text('⚠ Ya existe una empresa con ese nombre.').addClass('text-danger');
-                        } else {
-                            $('#ne_nombre').addClass('is-valid');
-                            $('#ne_feedback').text('✓ Disponible.').addClass('text-success');
-                        }
-                    }, 'json');
-                }, 500);
-            });
-
-            $('#ne_guardar').on('click', function() {
-                var nombre = $('#ne_nombre').val().trim();
-                if (nombre.length < 2) {
-                    $('#ne_nombre').addClass('is-invalid');
-                    $('#ne_feedback').text('Ingresa el nombre de la empresa.').addClass('text-danger');
-                    return;
-                }
-                if ($('#ne_nombre').hasClass('is-invalid')) return;
-                $('#ne_guardar').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
-                $.post('ajax_empresa.php', { action: 'crear', nombre: nombre }, function(res) {
-                    if (res.success) {
-                        $('#sel_empresa').append('<option value="'+res.nombre+'">'+res.nombre+'</option>');
-                        $('#sel_empresa').val(res.nombre).trigger('change');
-                        bootstrap.Modal.getInstance(document.getElementById('modalNuevaEmpresa')).hide();
-                    } else {
-                        $('#ne_nombre').addClass('is-invalid');
-                        $('#ne_feedback').text(res.msg).addClass('text-danger');
-                        $('#ne_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
-                    }
-                }, 'json').fail(function() {
-                    $('#ne_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
-                    alert('Error de conexión. Intenta nuevamente.');
-                });
-            });
 <?php endif; ?>
         });
     </script>
