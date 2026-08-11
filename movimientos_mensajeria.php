@@ -170,13 +170,7 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                         <input type="text" name="doc" class="form-control form-control-sm" placeholder="Factura / Vale #">
                     </div>
                     <div class="col-12 col-md-2">
-                        <label class="small fw-bold d-flex align-items-center gap-1">Empresa
-                            <button type="button" class="btn btn-success btn-sm py-0 px-1 lh-1" style="font-size:0.75rem;"
-                                data-bs-toggle="modal" data-bs-target="#modalNuevaEmpresa"
-                                title="Agregar nueva empresa">
-                                <i class="bi bi-plus-lg"></i>
-                            </button>
-                        </label>
+                        <label class="small fw-bold">Empresa</label>
                         <select name="emp" id="sel_empresa" class="form-select form-select-sm select2-buscable">
                             <option value="">— Seleccionar —</option>
                             <?php foreach ($empresas as $e): ?>
