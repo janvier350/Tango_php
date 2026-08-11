@@ -28,7 +28,7 @@ if (isset($_POST['reg_mov'])) {
     $fecha    = $_POST['f'] ?? date('Y-m-d');
     $concepto = trim($_POST['c'] ?? '');
     $proveedor= trim($_POST['prov'] ?? '');
-    $benef    = trim($_POST['benef'] ?? '');
+    $empresa  = trim($_POST['emp'] ?? '');
     $doc      = trim($_POST['doc'] ?? '');
     $inf_fin  = !empty($_POST['id_reposicion']) ? intval($_POST['id_reposicion']) : null;
     $monto    = floatval($_POST['m'] ?? 0);
@@ -54,7 +54,8 @@ if (isset($_POST['reg_mov'])) {
         $periodo = date("Y-n", strtotime($fecha));
         $fecha_reg = date("Y-m-d H:i:s");
         $estado = 'A';
-        $empresa = ''; $banco = ''; $cheque = ''; $vale = ''; $id_proyecto = null;
+        // ID_PROYECTO es NOT NULL en la base: esta caja no usa proyecto, se guarda 0.
+        $banco = ''; $cheque = ''; $vale = ''; $intermediario2 = ''; $id_proyecto = 0;
 
         $stmt = $conn->prepare("INSERT INTO movimientos
             (fecha, empresa, concepto, intermediario, importe_recibido, importe_entregado,
@@ -64,7 +65,7 @@ if (isset($_POST['reg_mov'])) {
         $stmt->bind_param("ssssddssssssisisis",
             $fecha, $empresa, $concepto, $proveedor, $imp_rec, $imp_ent,
             $vale, $doc, $inf_fin, $periodo, $banco, $cheque, $id_usuario,
-            $fecha_reg, $id_proyecto, $benef, $id_oficina, $estado);
+            $fecha_reg, $id_proyecto, $intermediario2, $id_oficina, $estado);
 
         if ($stmt->execute()) {
             header("Location: movimientos_mensajeria.php?msg=ok");
@@ -86,6 +87,11 @@ $res_c = $conn->query("SELECT b.ID_REPOSICION, b.REPOSICION
                        WHERE a.nombre = 'CAJA MENSAJERIA'
                        ORDER BY b.REPOSICION ASC");
 if ($res_c) $cuentas = $res_c->fetch_all(MYSQLI_ASSOC);
+
+// Empresas (para el selector con busqueda)
+$empresas = [];
+$res_e = $conn->query("SELECT nombre FROM cat_empresas ORDER BY nombre ASC");
+if ($res_e) $empresas = $res_e->fetch_all(MYSQLI_ASSOC);
 
 // Movimientos de la caja (con saldo acumulado)
 $movs = [];
@@ -109,6 +115,7 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
     <title>TANGO | Caja Mensajería</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="estilos.css">
 </head>
 <body class="bg-light">
@@ -162,9 +169,20 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                         <label class="small fw-bold">Doc. Soporte</label>
                         <input type="text" name="doc" class="form-control form-control-sm" placeholder="Factura / Vale #">
                     </div>
-                    <div class="col-6 col-md-1">
-                        <label class="small fw-bold">Beneficiario</label>
-                        <input type="text" name="benef" class="form-control form-control-sm" placeholder="(opcional)">
+                    <div class="col-12 col-md-2">
+                        <label class="small fw-bold d-flex align-items-center gap-1">Empresa
+                            <button type="button" class="btn btn-success btn-sm py-0 px-1 lh-1" style="font-size:0.75rem;"
+                                data-bs-toggle="modal" data-bs-target="#modalNuevaEmpresa"
+                                title="Agregar nueva empresa">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </label>
+                        <select name="emp" id="sel_empresa" class="form-select form-select-sm select2-buscable">
+                            <option value="">— Seleccionar —</option>
+                            <?php foreach ($empresas as $e): ?>
+                            <option value="<?php echo htmlspecialchars($e['nombre']); ?>"><?php echo htmlspecialchars($e['nombre']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     <div class="col-6 col-md-2">
                         <label class="small fw-bold">Tipo</label>
@@ -197,7 +215,7 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                 <thead class="table-secondary text-center">
                     <tr>
                         <th>#</th><th>FECHA</th><th>CUENTA</th><th>CONCEPTO</th>
-                        <th>PROVEEDOR</th><th>DOC.</th>
+                        <th>PROVEEDOR</th><th>EMPRESA</th><th>DOC.</th>
                         <th>INGRESO (+)</th><th>GASTO (-)</th><th class="table-primary">SALDO</th>
                         <th>ESTADO</th><th>ACCIONES</th>
                     </tr>
@@ -216,6 +234,7 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                         <td><?php echo htmlspecialchars($m['cuenta'] ?? '—'); ?></td>
                         <td><?php echo htmlspecialchars($m['concepto']); ?></td>
                         <td><?php echo htmlspecialchars($m['intermediario']); ?></td>
+                        <td><?php echo htmlspecialchars($m['empresa']); ?></td>
                         <td class="text-center"><?php echo htmlspecialchars($m['doc_soporte']); ?></td>
                         <td class="text-end text-success"><?php echo $m['importe_recibido'] > 0 ? '$'.number_format($m['importe_recibido'],2) : '-'; ?></td>
                         <td class="text-end text-danger"><?php echo $m['importe_entregado'] > 0 ? '$'.number_format($m['importe_entregado'],2) : '-'; ?></td>
@@ -255,13 +274,99 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                     </tr>
                 <?php endforeach; ?>
                 <?php if (empty($movs)): ?>
-                    <tr><td colspan="11" class="text-center text-muted py-3">Aún no hay movimientos en esta caja.</td></tr>
+                    <tr><td colspan="12" class="text-center text-muted py-3">Aún no hay movimientos en esta caja.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
         </div>
     </div>
 
+<!-- Modal: Nueva Empresa -->
+<div class="modal fade" id="modalNuevaEmpresa" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2 bg-dark text-white">
+        <h6 class="modal-title mb-0"><i class="bi bi-building me-2"></i>Nueva Empresa</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label small fw-bold">Nombre de la Empresa</label>
+          <input type="text" id="ne_nombre" class="form-control form-control-sm text-uppercase"
+                 placeholder="Ej: BUADNET..." autocomplete="off">
+          <div id="ne_feedback" class="form-text mt-1"></div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="ne_guardar" class="btn btn-dark btn-sm">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('.select2-buscable').select2({ placeholder: "Buscar empresa...", allowClear: true, width: '100%', theme: "classic" });
+
+    // --- Modal Nueva Empresa ---
+    var checkTimerEmpresa;
+    $('#modalNuevaEmpresa').on('show.bs.modal', function() {
+        $('#ne_nombre').val('').removeClass('is-valid is-invalid');
+        $('#ne_feedback').text('').removeClass('text-success text-danger');
+        $('#ne_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+    });
+    $('#modalNuevaEmpresa').on('shown.bs.modal', function() { $('#ne_nombre').focus(); });
+
+    $('#ne_nombre').on('input', function() {
+        var val = $(this).val().trim();
+        clearTimeout(checkTimerEmpresa);
+        $(this).removeClass('is-valid is-invalid');
+        $('#ne_feedback').text('').removeClass('text-success text-danger');
+        if (val.length < 2) return;
+        checkTimerEmpresa = setTimeout(function() {
+            $.post('ajax_empresa.php', { action: 'check', nombre: val }, function(res) {
+                if (res.exists) {
+                    $('#ne_nombre').addClass('is-invalid');
+                    $('#ne_feedback').text('⚠ Ya existe una empresa con ese nombre.').addClass('text-danger');
+                } else {
+                    $('#ne_nombre').addClass('is-valid');
+                    $('#ne_feedback').text('✓ Disponible.').addClass('text-success');
+                }
+            }, 'json');
+        }, 500);
+    });
+
+    $('#ne_guardar').on('click', function() {
+        var nombre = $('#ne_nombre').val().trim();
+        if (nombre.length < 2) {
+            $('#ne_nombre').addClass('is-invalid');
+            $('#ne_feedback').text('Ingresa el nombre de la empresa.').addClass('text-danger');
+            return;
+        }
+        if ($('#ne_nombre').hasClass('is-invalid')) return;
+        $('#ne_guardar').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+        $.post('ajax_empresa.php', { action: 'crear', nombre: nombre }, function(res) {
+            if (res.success) {
+                $('#sel_empresa').append('<option value="'+res.nombre+'">'+res.nombre+'</option>');
+                $('#sel_empresa').val(res.nombre).trigger('change');
+                bootstrap.Modal.getInstance(document.getElementById('modalNuevaEmpresa')).hide();
+            } else {
+                $('#ne_nombre').addClass('is-invalid');
+                $('#ne_feedback').text(res.msg).addClass('text-danger');
+                $('#ne_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+            }
+        }, 'json').fail(function() {
+            $('#ne_guardar').prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Guardar');
+            alert('Error de conexión. Intenta nuevamente.');
+        });
+    });
+});
+</script>
 </body>
 </html>
