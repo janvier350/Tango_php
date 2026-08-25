@@ -169,11 +169,16 @@ $(document).ready(function() {
                  <h1> Caja <?php echo htmlspecialchars($nombre_oficina_caja); ?> </h1>
                  <p> validacion de movimientos como CEO </p>
               </div>
+              <div class="d-flex gap-2">
+              <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalReportePDF">
+                  <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
+              </button>
               <?php if ($_SESSION["user_rol"] == 3 || $_SESSION["user_rol"] == 4): ?>
               <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaInfFin">
                   <i class="bi bi-plus-lg me-1"></i>Nueva Inf. Financiera
               </button>
               <?php endif; ?>
+              </div>
             </div>
         </div>
         <br>
@@ -336,6 +341,7 @@ function abrirModalAnular(id) {
 </script>
 
 <?php include 'inf_fin_modales.php'; ?>
+<?php $rep_id_oficina = $id_oficina; include 'modal_reporte_pdf.php'; ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
