@@ -6,8 +6,37 @@ require_once 'auth.php';
 verificar_auth();
 $conn->set_charset("utf8");
 
-$id_oficina  = intval($_SESSION["oficina_ID"]);
-$nombre_caja = $_SESSION["oficina"];
+$id_rol           = intval($_SESSION["user_rol"] ?? 0);
+$id_oficina_ses   = intval($_SESSION["oficina_ID"]);
+$nombre_caja      = $_SESSION["oficina"];
+
+// --- Oficina (caja) del reporte ---
+// CEO (3) y Administracion (4) pueden pedir el reporte de cualquier caja.
+// El operador de recepcion 403 puede pedir el de cajas independientes (ej. Mensajeria).
+// El resto siempre obtiene el de su propia oficina de sesion.
+$req_oficina = intval($_GET['id_oficina'] ?? 0);
+$puede_otras = in_array($id_rol, [3, 4]);
+if (!$puede_otras && $id_rol == 2 && strtoupper(trim($_SESSION["oficina"])) === '403'
+    && $req_oficina > 0 && col_existe($conn, 'CTR_OFICINA', 'ES_INDEPENDIENTE')) {
+    $chk = $conn->prepare("SELECT ES_INDEPENDIENTE FROM CTR_OFICINA WHERE ID_OFICINA = ?");
+    $chk->bind_param("i", $req_oficina);
+    $chk->execute();
+    if ((int)($chk->get_result()->fetch_assoc()['ES_INDEPENDIENTE'] ?? 0) === 1) {
+        $puede_otras = true;
+    }
+}
+if ($req_oficina > 0 && $puede_otras && $req_oficina !== $id_oficina_ses) {
+    $id_oficina = $req_oficina;
+    // Nombre real de la caja solicitada
+    $stmt_ofi = $conn->prepare("SELECT OFICINA FROM CTR_OFICINA WHERE ID_OFICINA = ?");
+    $stmt_ofi->bind_param("i", $id_oficina);
+    $stmt_ofi->execute();
+    $row_ofi = $stmt_ofi->get_result()->fetch_assoc();
+    if (!$row_ofi) { header("Location: index.php"); exit; }
+    $nombre_caja = $row_ofi['OFICINA'];
+} else {
+    $id_oficina = $id_oficina_ses;
+}
 
 // --- Filtros: mes y anio ---
 $mes  = isset($_GET['mes'])  ? intval($_GET['mes'])  : intval(date('n'));

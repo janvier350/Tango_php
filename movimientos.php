@@ -164,7 +164,16 @@ $f_texto  = $_GET['f_texto']  ?? '';
     
     
     <div class="container-fluid px-4 mt-3">
-        
+
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h4 class="fw-bold mb-0"><i class="bi bi-cash-stack me-2"></i>Caja
+                <span class="badge bg-dark"><?php echo htmlspecialchars($_SESSION["oficina"]); ?></span>
+            </h4>
+            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalReportePDF">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
+            </button>
+        </div>
+
         <div class="card mb-12 border-0 shadow-sm">
             <div class="card-body">
                 <?php if ($error_doc): ?>
@@ -1346,5 +1355,6 @@ $(document).ready(function() {
     });
 });
 </script>
+<?php include 'modal_reporte_pdf.php'; ?>
 </body>
 </html>
