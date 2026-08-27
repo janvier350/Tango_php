@@ -19,31 +19,16 @@ $rep_oficina_param = isset($rep_id_oficina) ? intval($rep_id_oficina) : 0;
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p class="small text-muted mb-2">Selecciona el mes y año para descargar el detalle en PDF.</p>
+        <p class="small text-muted mb-2">Selecciona el rango de fechas para descargar el detalle en PDF.</p>
         <div class="mb-2">
-          <label class="form-label small fw-bold">Mes</label>
-          <select id="rep_mes" class="form-select form-select-sm">
-            <?php
-            $meses_rep = [1=>'Enero',2=>'Febrero',3=>'Marzo',4=>'Abril',5=>'Mayo',6=>'Junio',
-                          7=>'Julio',8=>'Agosto',9=>'Septiembre',10=>'Octubre',11=>'Noviembre',12=>'Diciembre'];
-            $mes_actual = intval(date('n'));
-            foreach ($meses_rep as $num => $nom):
-                $sel = ($num == $mes_actual) ? 'selected' : ''; ?>
-            <option value="<?php echo $num; ?>" <?php echo $sel; ?>><?php echo $nom; ?></option>
-            <?php endforeach; ?>
-          </select>
+          <label class="form-label small fw-bold">Desde</label>
+          <input type="date" id="rep_desde" class="form-control form-control-sm" value="<?php echo date('Y-m-01'); ?>">
         </div>
         <div class="mb-1">
-          <label class="form-label small fw-bold">Año</label>
-          <select id="rep_anio" class="form-select form-select-sm">
-            <?php
-            $anio_actual = intval(date('Y'));
-            for ($a = $anio_actual; $a >= $anio_actual - 3; $a--):
-                $sel = ($a == $anio_actual) ? 'selected' : ''; ?>
-            <option value="<?php echo $a; ?>" <?php echo $sel; ?>><?php echo $a; ?></option>
-            <?php endfor; ?>
-          </select>
+          <label class="form-label small fw-bold">Hasta</label>
+          <input type="date" id="rep_hasta" class="form-control form-control-sm" value="<?php echo date('Y-m-d'); ?>">
         </div>
+        <div id="rep_error" class="text-danger small mt-2" style="display:none;"></div>
       </div>
       <div class="modal-footer py-2">
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
@@ -59,10 +44,22 @@ document.addEventListener('DOMContentLoaded', function () {
     var btn = document.getElementById('rep_generar');
     if (!btn) return;
     btn.addEventListener('click', function () {
-        var mes  = document.getElementById('rep_mes').value;
-        var anio = document.getElementById('rep_anio').value;
-        var of   = <?php echo $rep_oficina_param; ?>;
-        var url  = 'reporte_movimientos.php?mes=' + mes + '&anio=' + anio + (of > 0 ? '&id_oficina=' + of : '');
+        var desde = document.getElementById('rep_desde').value;
+        var hasta = document.getElementById('rep_hasta').value;
+        var err   = document.getElementById('rep_error');
+        if (!desde || !hasta) {
+            err.textContent = 'Selecciona ambas fechas (Desde y Hasta).';
+            err.style.display = 'block';
+            return;
+        }
+        if (desde > hasta) {
+            err.textContent = 'La fecha "Desde" no puede ser mayor que "Hasta".';
+            err.style.display = 'block';
+            return;
+        }
+        err.style.display = 'none';
+        var of  = <?php echo $rep_oficina_param; ?>;
+        var url = 'reporte_movimientos.php?desde=' + desde + '&hasta=' + hasta + (of > 0 ? '&id_oficina=' + of : '');
         window.open(url, '_blank');
         var mEl = document.getElementById('modalReportePDF');
         if (window.bootstrap) {
