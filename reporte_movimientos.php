@@ -38,31 +38,52 @@ if ($req_oficina > 0 && $puede_otras && $req_oficina !== $id_oficina_ses) {
     $id_oficina = $id_oficina_ses;
 }
 
-// --- Filtros: mes y anio ---
-$mes  = isset($_GET['mes'])  ? intval($_GET['mes'])  : intval(date('n'));
-$anio = isset($_GET['anio']) ? intval($_GET['anio']) : intval(date('Y'));
-if ($mes < 1 || $mes > 12) $mes = intval(date('n'));
-if ($anio < 2000 || $anio > 2100) $anio = intval(date('Y'));
-
 $meses_es = [1=>'ENERO',2=>'FEBRERO',3=>'MARZO',4=>'ABRIL',5=>'MAYO',6=>'JUNIO',
              7=>'JULIO',8=>'AGOSTO',9=>'SEPTIEMBRE',10=>'OCTUBRE',11=>'NOVIEMBRE',12=>'DICIEMBRE'];
 
-// --- Saldo inicial: acumulado de movimientos activos ANTERIORES al mes ---
-$primer_dia = sprintf('%04d-%02d-01', $anio, $mes);
+// --- Filtros de fecha: rango Desde/Hasta (prioridad) o mes/anio ---
+$desde = isset($_GET['desde']) ? trim($_GET['desde']) : '';
+$hasta = isset($_GET['hasta']) ? trim($_GET['hasta']) : '';
+$re_fecha  = '/^\d{4}-\d{2}-\d{2}$/';
+$usar_rango = (preg_match($re_fecha, $desde) && preg_match($re_fecha, $hasta));
+
+if ($usar_rango) {
+    if ($desde > $hasta) { $tmp = $desde; $desde = $hasta; $hasta = $tmp; }
+    $etiqueta_periodo = 'DEL ' . date('d/m/Y', strtotime($desde)) . ' AL ' . date('d/m/Y', strtotime($hasta));
+    $fecha_corte = $desde; // saldo inicial: movimientos anteriores a "desde"
+} else {
+    $mes  = isset($_GET['mes'])  ? intval($_GET['mes'])  : intval(date('n'));
+    $anio = isset($_GET['anio']) ? intval($_GET['anio']) : intval(date('Y'));
+    if ($mes < 1 || $mes > 12) $mes = intval(date('n'));
+    if ($anio < 2000 || $anio > 2100) $anio = intval(date('Y'));
+    $etiqueta_periodo = $meses_es[$mes] . ' ' . $anio;
+    $fecha_corte = sprintf('%04d-%02d-01', $anio, $mes);
+}
+
+// --- Saldo inicial: acumulado de movimientos activos ANTERIORES a la fecha de corte ---
 $stmt_ini = $conn->prepare("SELECT COALESCE(SUM(importe_recibido - importe_entregado),0) AS saldo_ini
                             FROM movimientos
                             WHERE ID_OFICINA = ? AND ESTADO <> 'I' AND fecha < ?");
-$stmt_ini->bind_param("is", $id_oficina, $primer_dia);
+$stmt_ini->bind_param("is", $id_oficina, $fecha_corte);
 $stmt_ini->execute();
 $saldo_inicial = (float)($stmt_ini->get_result()->fetch_assoc()['saldo_ini'] ?? 0);
 
-// --- Movimientos del mes/anio ---
-$stmt = $conn->prepare("SELECT m.*, r.REPOSICION AS cuenta
-                        FROM movimientos m
-                        LEFT JOIN CAT_REPOSICION r ON m.inf_fin = r.ID_REPOSICION
-                        WHERE m.ID_OFICINA = ? AND YEAR(m.fecha) = ? AND MONTH(m.fecha) = ?
-                        ORDER BY m.fecha ASC, m.id ASC");
-$stmt->bind_param("iii", $id_oficina, $anio, $mes);
+// --- Movimientos del periodo ---
+if ($usar_rango) {
+    $stmt = $conn->prepare("SELECT m.*, r.REPOSICION AS cuenta
+                            FROM movimientos m
+                            LEFT JOIN CAT_REPOSICION r ON m.inf_fin = r.ID_REPOSICION
+                            WHERE m.ID_OFICINA = ? AND m.fecha BETWEEN ? AND ?
+                            ORDER BY m.fecha ASC, m.id ASC");
+    $stmt->bind_param("iss", $id_oficina, $desde, $hasta);
+} else {
+    $stmt = $conn->prepare("SELECT m.*, r.REPOSICION AS cuenta
+                            FROM movimientos m
+                            LEFT JOIN CAT_REPOSICION r ON m.inf_fin = r.ID_REPOSICION
+                            WHERE m.ID_OFICINA = ? AND YEAR(m.fecha) = ? AND MONTH(m.fecha) = ?
+                            ORDER BY m.fecha ASC, m.id ASC");
+    $stmt->bind_param("iii", $id_oficina, $anio, $mes);
+}
 $stmt->execute();
 $movs = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
@@ -83,7 +104,7 @@ $usuario = $_SESSION["user_name"] ?? ($_SESSION["user_id"] ?? '');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <title>Reporte <?php echo $meses_es[$mes] . ' ' . $anio; ?></title>
+    <title>Reporte <?php echo htmlspecialchars($nombre_caja) . ' - ' . $etiqueta_periodo; ?></title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 12px; color: #222; margin: 20px; }
@@ -100,6 +121,13 @@ $usuario = $_SESSION["user_name"] ?? ($_SESSION["user_id"] ?? '');
         .header h2 { margin: 0 0 4px; letter-spacing: 1px; }
         .header .caja { display:inline-block; background:#212529; color:#fff; padding:2px 10px; border-radius:4px; font-weight:bold; font-size:13px; }
         .header .periodo { margin-top: 6px; font-size: 15px; font-weight: bold; color:#0097b2; }
+        .header .fecha-imp { margin-top: 3px; font-size: 11px; color: #666; }
+
+        .firmas { display: flex; justify-content: space-around; gap: 40px; margin-top: 70px; page-break-inside: avoid; }
+        .firma-box { text-align: center; width: 45%; }
+        .firma-linea { border-top: 1.5px solid #000; margin-bottom: 6px; }
+        .firma-rol { font-weight: bold; font-size: 12px; letter-spacing: .5px; }
+        .firma-cap { font-size: 10px; color: #666; }
 
         .resumen { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; }
         .card-r { border: 1px solid #ccc; border-radius: 6px; padding: 8px 16px; text-align: center; min-width: 150px; }
@@ -134,13 +162,14 @@ $usuario = $_SESSION["user_name"] ?? ($_SESSION["user_id"] ?? '');
 <body>
     <div class="toolbar">
         <button class="btn-print" onclick="window.print();">🖨 Imprimir / Guardar PDF</button>
-        <a class="btn-back" href="movimientos_mensajeria.php">← Volver</a>
+        <a class="btn-back" href="javascript:history.back()">← Volver</a>
     </div>
 
     <div class="header">
         <h2>DETALLE DE MOVIMIENTOS</h2>
         <span class="caja"><?php echo htmlspecialchars($nombre_caja); ?></span>
-        <div class="periodo"><?php echo $meses_es[$mes] . ' ' . $anio; ?></div>
+        <div class="periodo"><?php echo htmlspecialchars($etiqueta_periodo); ?></div>
+        <div class="fecha-imp">Fecha de impresión: <?php echo $fecha_impresion; ?></div>
     </div>
 
     <div class="resumen">
@@ -186,7 +215,7 @@ $usuario = $_SESSION["user_name"] ?? ($_SESSION["user_id"] ?? '');
             </tr>
             <?php endforeach; ?>
             <?php if (empty($movs)): ?>
-            <tr><td colspan="11" class="cen" style="padding:15px;color:#888;">No hay movimientos registrados en <?php echo $meses_es[$mes].' '.$anio; ?>.</td></tr>
+            <tr><td colspan="11" class="cen" style="padding:15px;color:#888;">No hay movimientos registrados en el período <?php echo htmlspecialchars($etiqueta_periodo); ?>.</td></tr>
             <?php endif; ?>
         </tbody>
         <tfoot>
@@ -200,8 +229,21 @@ $usuario = $_SESSION["user_name"] ?? ($_SESSION["user_id"] ?? '');
         </tfoot>
     </table>
 
+    <div class="firmas">
+        <div class="firma-box">
+            <div class="firma-linea"></div>
+            <div class="firma-rol"><?php echo htmlspecialchars(strtoupper($nombre_caja)); ?></div>
+            <div class="firma-cap">Elabora / Entrega Conforme</div>
+        </div>
+        <div class="firma-box">
+            <div class="firma-linea"></div>
+            <div class="firma-rol">ADMINISTRACIÓN</div>
+            <div class="firma-cap">Revisa / Aprueba</div>
+        </div>
+    </div>
+
     <div class="footer-print">
-        Reporte generado por: <?php echo htmlspecialchars($usuario); ?> | Caja: <?php echo htmlspecialchars($nombre_caja); ?> | Período: <?php echo $meses_es[$mes].' '.$anio; ?> | Impreso: <?php echo $fecha_impresion; ?>
+        Reporte generado por: <?php echo htmlspecialchars($usuario); ?> | Caja: <?php echo htmlspecialchars($nombre_caja); ?> | Período: <?php echo htmlspecialchars($etiqueta_periodo); ?> | Impreso: <?php echo $fecha_impresion; ?>
     </div>
 </body>
 </html>
