@@ -93,6 +93,17 @@ $f_hasta  = $_GET['f_hasta']  ?? '';
 $f_estado = $_GET['f_estado'] ?? 'A';
 $f_tipo   = $_GET['f_tipo']   ?? '';
 $f_texto  = $_GET['f_texto']  ?? '';
+
+// Aligerar la carga: en una visita fresca (sin filtros enviados) mostrar por
+// defecto solo los ultimos ~3 meses. Con "Ver todo" o vaciando "Desde" y
+// filtrando, se muestran todos los movimientos.
+$filtro_enviado = isset($_GET['f_estado']) || isset($_GET['f_desde']) || isset($_GET['f_hasta'])
+                  || isset($_GET['f_texto']) || isset($_GET['f_tipo']);
+$limite_por_defecto = false;
+if (!$filtro_enviado && $f_desde === '') {
+    $f_desde = date('Y-m-01', strtotime('-2 months'));
+    $limite_por_defecto = true;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -146,8 +157,25 @@ $f_texto  = $_GET['f_texto']  ?? '';
 <script>
     $(document).ready(function() {
         $('select[name="id_proyecto"]').select2({ placeholder: "Buscar proyecto...", allowClear: true, width: '100%', theme: "classic" });
-        $('select[name="inter"]').select2({ placeholder: "Buscar beneficiario...", allowClear: true, width: '100%', theme: "classic" });
-        $('select[name="intermediario"]').select2({ placeholder: "Buscar intermediario...", allowClear: true, width: '100%', theme: "classic" });
+
+        // Beneficiario / Intermediario: carga bajo demanda (AJAX) en vez de volcar toda la tabla
+        function beneficiarioAjax(tipo, ph) {
+            return {
+                placeholder: ph, allowClear: true, width: '100%', theme: "classic",
+                minimumInputLength: 1,
+                language: { inputTooShort: function(){ return 'Escribe para buscar...'; },
+                            searching: function(){ return 'Buscando...'; },
+                            noResults: function(){ return 'Sin resultados'; } },
+                ajax: {
+                    url: 'ajax_beneficiario.php', type: 'POST', dataType: 'json', delay: 250,
+                    data: function(params){ return { action: 'search', q: params.term || '', tipo: tipo }; },
+                    processResults: function(data){ return { results: (data && data.results) ? data.results : [] }; },
+                    cache: true
+                }
+            };
+        }
+        $('select[name="inter"]').select2(beneficiarioAjax('',  'Buscar beneficiario...'));
+        $('select[name="intermediario"]').select2(beneficiarioAjax('I', 'Buscar intermediario...'));
         $('.select2-buscable').select2({ placeholder: "Seleccione una opcion", allowClear: true, width: '100%', theme: "classic" });
     });
 </script>
@@ -197,26 +225,14 @@ $f_texto  = $_GET['f_texto']  ?? '';
                                 <i class="bi bi-person-plus-fill"></i>
                             </button>
                         </label>
-                        <select name="inter" class="form-select form-select-sm buscable" required>
+                        <select name="inter" class="form-select form-select-sm" required>
                             <option value="">Buscar beneficiario...</option>
-                            <?php 
-                                $res_ben = $conn->query("SELECT RAZON_SOCIAL FROM BENEFICIARIO ORDER BY RAZON_SOCIAL ASC");
-                                while($ben = $res_ben->fetch_assoc()) {
-                                    echo "<option value='".htmlspecialchars($ben['RAZON_SOCIAL'], ENT_QUOTES, 'UTF-8')."'>".htmlspecialchars($ben['RAZON_SOCIAL'], ENT_QUOTES, 'UTF-8')."</option>";
-                                } 
-                            ?>
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label class="small fw-bold  text-primary">Intermediario</label>
-                        <select name="intermediario" class="form-select form-select-sm buscable" required>
+                        <select name="intermediario" class="form-select form-select-sm" required>
                             <option value="">Buscar intermediario...</option>
-                            <?php 
-                                $res_ben = $conn->query("SELECT RAZON_SOCIAL FROM BENEFICIARIO WHERE TIPO = 'I' ORDER BY RAZON_SOCIAL ASC");
-                                while($ben = $res_ben->fetch_assoc()) {
-                                    echo "<option value='".htmlspecialchars($ben['RAZON_SOCIAL'], ENT_QUOTES, 'UTF-8')."'>".htmlspecialchars($ben['RAZON_SOCIAL'], ENT_QUOTES, 'UTF-8')."</option>";
-                                } 
-                            ?>
                         </select>
                     </div>
                     <div class="col-md-4">
@@ -408,6 +424,13 @@ $f_texto  = $_GET['f_texto']  ?? '';
                 </form>
             </div>
         </div>
+
+        <?php if ($limite_por_defecto): ?>
+        <div class="alert alert-info py-2 px-3 small d-flex justify-content-between align-items-center mb-2">
+            <span><i class="bi bi-info-circle me-1"></i>Mostrando movimientos desde <strong><?php echo date('d/m/Y', strtotime($f_desde)); ?></strong> (últimos ~3 meses) para cargar más rápido.</span>
+            <a href="movimientos.php?f_estado=A&amp;f_desde=&amp;f_hasta=&amp;f_tipo=&amp;f_texto=" class="btn btn-sm btn-outline-primary py-0">Ver todo</a>
+        </div>
+        <?php endif; ?>
 
         <div class="tabla-card-scroll bg-white shadow-sm p-3">
 

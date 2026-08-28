@@ -48,4 +48,25 @@ if ($action === 'crear') {
     exit;
 }
 
+if ($action === 'search') {
+    // Búsqueda bajo demanda para Select2 (evita volcar toda la tabla en la página)
+    $q    = trim($_POST['q'] ?? $_GET['q'] ?? '');
+    $tipo = $_POST['tipo'] ?? $_GET['tipo'] ?? '';
+    $like = '%' . $q . '%';
+    if ($tipo === 'I') {
+        $stmt = $conn->prepare("SELECT RAZON_SOCIAL FROM BENEFICIARIO WHERE TIPO='I' AND RAZON_SOCIAL LIKE ? ORDER BY RAZON_SOCIAL ASC LIMIT 40");
+    } else {
+        $stmt = $conn->prepare("SELECT RAZON_SOCIAL FROM BENEFICIARIO WHERE RAZON_SOCIAL LIKE ? ORDER BY RAZON_SOCIAL ASC LIMIT 40");
+    }
+    $stmt->bind_param("s", $like);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $out = [];
+    while ($row = $res->fetch_assoc()) {
+        $out[] = ['id' => $row['RAZON_SOCIAL'], 'text' => $row['RAZON_SOCIAL']];
+    }
+    echo json_encode(['results' => $out]);
+    exit;
+}
+
 echo json_encode(['success' => false, 'msg' => 'Acción no válida.']);
