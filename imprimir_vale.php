@@ -1,4 +1,7 @@
 <?php
+// Bufferizar toda la salida para enviar la respuesta completa de una sola vez.
+// Evita respuestas cortadas/parciales que bajo HTTP/2 provocan ERR_CONNECTION_CLOSED.
+ob_start();
 // 1. CABECERA PARA FORZAR UTF-8 (Soluciona tildes en el navegador)
 header('Content-Type: text/html; charset=utf-8');
 // 1. CONFIGURACI�0�7N DE ZONA HORARIA
@@ -8,7 +11,8 @@ require_once 'config.php';
 require_once 'auth.php'; // Necesario para obtener el nombre del usuario de la sesi��n
 verificar_auth();
 
-$id = $_GET['id'];
+$id = intval($_GET['id'] ?? 0);
+if ($id <= 0) { echo 'Vale no válido.'; exit; }
 
 // Traemos info del movimiento, proyectos y el nombre del usuario que registr��
 $stmt = $conn->prepare("SELECT m.*, r.REPOSICION, p.PROYECTO, u.nombres as nombre_usuario_registro
@@ -20,6 +24,7 @@ $stmt = $conn->prepare("SELECT m.*, r.REPOSICION, p.PROYECTO, u.nombres as nombr
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $val = $stmt->get_result()->fetch_assoc();
+if (!$val) { echo 'Vale no encontrado.'; exit; }
 
 // Determinamos si es INGRESO o EGRESO y definimos colores
 $es_ingreso = ($val['importe_recibido'] > 0);
@@ -146,3 +151,7 @@ $fecha_impresion = date('d/m/Y H:i:s');
     </div>
 </body>
 </html>
+<?php
+// Enviar la respuesta completa (ya generada en el buffer) de una sola vez.
+if (ob_get_level() > 0) { ob_end_flush(); }
+?>
