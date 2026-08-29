@@ -249,10 +249,22 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                         </td>
                         <td class="text-center">
                             <div class="btn-group" role="group">
-                                <a href="imprimir_vale.php?id=<?php echo $m['id']; ?>" target="_blank" title="Ver PDF"
-                                   class="btn btn-outline-primary btn-sm <?php echo $anulado ? 'disabled' : ''; ?>">
+                                <button type="button" onclick="abrirValeDesdeBtn(this)" title="Imprimir Vale"
+                                   class="btn btn-outline-primary btn-sm <?php echo $anulado ? 'disabled' : ''; ?>" <?php echo $anulado ? 'disabled' : ''; ?>
+                                   data-id="<?php echo $m['id']; ?>"
+                                   data-fecha="<?php echo $m['fecha']; ?>"
+                                   data-rec="<?php echo $m['importe_recibido']; ?>"
+                                   data-ent="<?php echo $m['importe_entregado']; ?>"
+                                   data-benef="<?php echo htmlspecialchars($m['intermediario'] ?? '', ENT_QUOTES); ?>"
+                                   data-inter2="<?php echo htmlspecialchars($m['INTERMEDIARIO2'] ?? '', ENT_QUOTES); ?>"
+                                   data-concepto="<?php echo htmlspecialchars($m['concepto'] ?? '', ENT_QUOTES); ?>"
+                                   data-proyecto=""
+                                   data-inffin="<?php echo htmlspecialchars($m['cuenta'] ?? '', ENT_QUOTES); ?>"
+                                   data-doc="<?php echo htmlspecialchars($m['doc_soporte'] ?? '', ENT_QUOTES); ?>"
+                                   data-banco="<?php echo htmlspecialchars($m['banco'] ?? '', ENT_QUOTES); ?>"
+                                   data-cheque="<?php echo htmlspecialchars($m['cheque_num'] ?? '', ENT_QUOTES); ?>">
                                     <i class="bi bi-file-earmark-pdf"></i>
-                                </a>
+                                </button>
                                 <?php if (!$aprobado && !$anulado): ?>
                                 <a href="editar_movimiento.php?id=<?php echo $m['id']; ?>" title="Editar"
                                    class="btn btn-outline-warning btn-sm">
@@ -369,5 +381,6 @@ $(document).ready(function() {
     });
 });
 </script>
+<?php include 'vale_print.php'; ?>
 </body>
 </html>
