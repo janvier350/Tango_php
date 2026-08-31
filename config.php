@@ -1,4 +1,8 @@
 <?php
+// Bufferizar la salida desde el inicio: evita que cualquier espacio o salto de
+// línea suelto (en este u otro include) rompa los header()/redirect y provoque
+// ERR_HTTP2_PROTOCOL_ERROR al registrar, revisar o resolver.
+if (function_exists('ob_get_level') && ob_get_level() === 0) { ob_start(); }
 // --- CONFIGURACIÓN DE CONEXIÓN ---
 // Nota: se conecta primero por "localhost" (socket local, rápido y estable).
 // Conectar por el dominio público hace que cada request salga por DNS/firewall
@@ -31,4 +35,5 @@ if (!$conn) {
 }
 
 $conn->set_charset("utf8"); // Para que los acentos se vean bien
-?>
+// Sin etiqueta de cierre "?>" a propósito: evita enviar espacios/saltos de
+// línea que romperían los redirect header("Location: ...").
