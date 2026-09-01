@@ -35,5 +35,5 @@ if (!$conn) {
 }
 
 $conn->set_charset("utf8"); // Para que los acentos se vean bien
-// Sin etiqueta de cierre "?>" a propósito: evita enviar espacios/saltos de
-// línea que romperían los redirect header("Location: ...").
+// Sin etiqueta de cierre PHP a proposito: evita enviar espacios o saltos de
+// linea que romperian los redirect (header Location).

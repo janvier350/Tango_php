@@ -85,5 +85,5 @@ if (isset($_GET['logout'])) {
 
     exit;
 }
-// Sin etiqueta de cierre "?>" a propósito: evita enviar espacios/saltos de
-// línea antes de los header("Location: ...").
+// Sin etiqueta de cierre PHP a proposito: evita enviar espacios o saltos de
+// linea antes de los redirect (header Location).
