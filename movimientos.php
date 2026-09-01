@@ -512,7 +512,20 @@ if (!$filtro_enviado && $f_desde === '') {
     $stmt_list->execute();
     $movs = $stmt_list->get_result();
 
-    while($m = $movs->fetch_assoc()): 
+    // Saldo inicial: acumulado de los movimientos activos del usuario ANTERIORES
+    // a "Desde", para que el saldo corrido no arranque en 0 cuando hay filtro de
+    // fecha (ej. el límite por defecto de 3 meses) y coincida con el total real.
+    if ($f_desde !== '') {
+        $stmt_ini = $conn->prepare("SELECT COALESCE(SUM(importe_recibido - importe_entregado),0) AS s
+                                    FROM movimientos
+                                    WHERE ID_USUARIO = ? AND ESTADO = 'A' AND fecha < ?");
+        $stmt_ini->bind_param("is", $id_usuario_sesion, $f_desde);
+        $stmt_ini->execute();
+        $saldo_acumulado = (float)($stmt_ini->get_result()->fetch_assoc()['s'] ?? 0);
+        $stmt_ini->close();
+    }
+
+    while($m = $movs->fetch_assoc()):
         $es_anulado = ($m['ESTADO'] == 'I');
         
         // CR�0�1TICO: Solo sumar al saldo si NO est�� anulado
@@ -921,7 +934,7 @@ $(document).ready(function() {
             { width: '70px',  targets: 16 }, // APROBAR
             { width: '110px', targets: 17 }  // ACCIONES
         ],
-        order: []
+        order: [[0, 'desc']]  // Último registro (SECUENCIA más alta) al inicio
     });
 
     // --- Validación Doc. Soporte en tiempo real ---
