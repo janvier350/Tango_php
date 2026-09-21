@@ -170,6 +170,9 @@ $(document).ready(function() {
                  <p> validacion de movimientos como CEO </p>
               </div>
               <div class="d-flex gap-2">
+              <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalExportExcel">
+                  <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
+              </button>
               <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalReportePDF">
                   <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
               </button>
@@ -342,6 +345,11 @@ function abrirModalAnular(id) {
 
 <?php include 'inf_fin_modales.php'; ?>
 <?php $rep_id_oficina = $id_oficina; include 'modal_reporte_pdf.php'; ?>
+<?php
+$export_es_admin = ($id_rol == 3 || $id_rol == 4);
+$export_id_oficina = $id_oficina;
+include 'modal_export_excel.php';
+?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

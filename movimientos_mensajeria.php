@@ -127,9 +127,14 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
             <h4 class="fw-bold mb-0"><i class="bi bi-scooter me-2"></i>Caja
                 <span class="badge bg-dark"><?php echo htmlspecialchars($nombre_caja); ?></span>
             </h4>
-            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalReportePDF">
-                <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
-            </button>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalExportExcel">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
+                </button>
+                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalReportePDF">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
+                </button>
+            </div>
         </div>
 
         <?php if (isset($_GET['msg']) && $_GET['msg']==='ok'): ?>
@@ -293,6 +298,7 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
     </div>
 
 <?php include 'modal_reporte_pdf.php'; ?>
+<?php $export_es_admin = false; $export_id_oficina = intval($_SESSION["oficina_ID"]); include 'modal_export_excel.php'; ?>
 
 <!-- Modal: Nueva Empresa -->
 <div class="modal fade" id="modalNuevaEmpresa" tabindex="-1" aria-hidden="true">
