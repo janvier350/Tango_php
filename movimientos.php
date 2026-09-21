@@ -197,9 +197,14 @@ if (!$filtro_enviado && $f_desde === '') {
             <h4 class="fw-bold mb-0"><i class="bi bi-cash-stack me-2"></i>Caja
                 <span class="badge bg-dark"><?php echo htmlspecialchars($_SESSION["oficina"]); ?></span>
             </h4>
-            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalReportePDF">
-                <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
-            </button>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalExportExcel">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
+                </button>
+                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalReportePDF">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
+                </button>
+            </div>
         </div>
 
         <div class="card mb-12 border-0 shadow-sm">
@@ -1405,5 +1410,10 @@ $(document).ready(function() {
 </script>
 <?php include 'modal_reporte_pdf.php'; ?>
 <?php include 'vale_print.php'; ?>
+<?php
+$export_es_admin = ($_SESSION["user_rol"] == 3 || $_SESSION["user_rol"] == 4);
+$export_id_oficina = intval($_SESSION["oficina_ID"]);
+include 'modal_export_excel.php';
+?>
 </body>
 </html>
