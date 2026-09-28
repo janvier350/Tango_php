@@ -30,7 +30,11 @@
         <?php if($_SESSION['user_rol'] == 4): ?>
          <a class="nav-link px-3" href="movimientos.php"><i class="bi bi-journal-text me-1"></i> Movimientos</a>
         <?php endif; ?>
-        
+
+        <?php if($_SESSION['user_rol'] == 3 || $_SESSION['user_rol'] == 4): ?>
+        <a class="nav-link px-3" href="auditoria.php"><i class="bi bi-shield-check me-1"></i> Auditoría</a>
+        <?php endif; ?>
+
         <?php if($_SESSION['user_rol'] == 1): ?>
     <li class="nav-item">
         <a class="nav-link" href="usuarios.php">Gestionar Usuarios</a>

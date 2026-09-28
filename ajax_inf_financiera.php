@@ -93,6 +93,8 @@ if ($action === 'crear') {
     $ins->bind_param("si", $reposicion, $id_cat);
     if ($ins->execute()) {
         $new_id = $conn->insert_id;
+        require_once 'audit.php';
+        registrar_auditoria($conn, 'Inf. Financiera', 'CREO', $new_id, 'Nueva cuenta: ' . $nombre_cat . ' / ' . $reposicion);
         echo json_encode([
             'success'    => true,
             'id'         => $new_id,

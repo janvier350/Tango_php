@@ -66,6 +66,18 @@ if (isset($_POST['update_mov'])) {
     );
 
     if ($stmt_up->execute()) {
+        require_once 'audit.php';
+        $cambios = [];
+        $viejo_monto = max((float)$m['importe_recibido'], (float)$m['importe_entregado']);
+        $nuevo_monto = (float)($_POST['m'] ?? 0);
+        if ((string)$m['fecha'] !== (string)($_POST['f'] ?? '')) $cambios[] = 'Fecha: ' . $m['fecha'] . ' → ' . ($_POST['f'] ?? '');
+        if ((string)$m['concepto'] !== (string)($_POST['c'] ?? '')) $cambios[] = 'Concepto: "' . $m['concepto'] . '" → "' . ($_POST['c'] ?? '') . '"';
+        if (abs($viejo_monto - $nuevo_monto) > 0.001) $cambios[] = 'Monto: ' . number_format($viejo_monto, 2) . ' → ' . number_format($nuevo_monto, 2);
+        if ((string)$m['intermediario'] !== (string)($_POST['inter'] ?? '')) $cambios[] = 'Beneficiario/Proveedor: "' . $m['intermediario'] . '" → "' . ($_POST['inter'] ?? '') . '"';
+        if ((string)$m['doc_soporte'] !== (string)($_POST['doc'] ?? '')) $cambios[] = 'Doc: "' . $m['doc_soporte'] . '" → "' . ($_POST['doc'] ?? '') . '"';
+        if ((string)$m['empresa'] !== (string)($_POST['emp'] ?? '')) $cambios[] = 'Empresa: "' . $m['empresa'] . '" → "' . ($_POST['emp'] ?? '') . '"';
+        $det = $cambios ? implode('; ', $cambios) : 'Sin cambios en campos principales';
+        registrar_auditoria($conn, 'Movimientos', 'EDITO', $id, $det);
         $destino = $es_indep ? 'movimientos_mensajeria.php' : 'movimientos.php';
         header("Location: $destino?msg=editado");
         exit();
