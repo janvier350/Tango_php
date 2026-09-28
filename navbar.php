@@ -31,7 +31,7 @@
          <a class="nav-link px-3" href="movimientos.php"><i class="bi bi-journal-text me-1"></i> Movimientos</a>
         <?php endif; ?>
 
-        <?php if($_SESSION['user_rol'] == 3 || $_SESSION['user_rol'] == 4): ?>
+        <?php if($_SESSION['user_rol'] == 1 || $_SESSION['user_rol'] == 3 || $_SESSION['user_rol'] == 4): ?>
         <a class="nav-link px-3" href="auditoria.php"><i class="bi bi-shield-check me-1"></i> Auditoría</a>
         <?php endif; ?>
 

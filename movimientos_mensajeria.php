@@ -282,9 +282,9 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                                    class="btn btn-outline-warning btn-sm">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
-                                <a href="anular_movimiento.php?id=<?php echo $m['id']; ?>&return=movimientos_mensajeria.php"
+                                <a href="#"
                                    title="Anular" class="btn btn-outline-danger btn-sm"
-                                   onclick="return confirm('¿Seguro de ANULAR este registro? El valor ya no contará en el saldo.');">
+                                   onclick="return anularMovimiento(<?php echo $m['id']; ?>, 'movimientos_mensajeria.php');">
                                     <i class="bi bi-x-circle"></i>
                                 </a>
                                 <?php elseif ($aprobado): ?>
@@ -306,6 +306,17 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
 
 <?php include 'modal_reporte_pdf.php'; ?>
 <?php $export_es_admin = false; $export_id_oficina = intval($_SESSION["oficina_ID"]); include 'modal_export_excel.php'; ?>
+<script>
+function anularMovimiento(id, ret) {
+    var m = prompt('Motivo de anulación (obligatorio):');
+    if (m === null) return false;
+    m = m.trim();
+    if (m === '') { alert('Debes indicar un motivo para anular.'); return false; }
+    window.location.href = 'anular_movimiento.php?id=' + id +
+        '&return=' + encodeURIComponent(ret) + '&motivo=' + encodeURIComponent(m);
+    return false;
+}
+</script>
 
 <!-- Modal: Nueva Empresa -->
 <div class="modal fade" id="modalNuevaEmpresa" tabindex="-1" aria-hidden="true">

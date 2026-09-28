@@ -604,10 +604,10 @@ if (!$filtro_enviado && $f_desde === '') {
                 <a href="editar_movimiento.php?id=<?php echo $m['id']; ?>" title="Editar" class="btn btn-outline-warning btn-sm <?php echo $es_anulado ? 'disabled' : ''; ?>"><i class="bi bi-pencil-square"></i></a>
 
                 <?php if (!$es_anulado): ?>
-                <a href="anular_movimiento.php?id=<?php echo $m['id']; ?>"
+                <a href="#"
                    title="Anular"
                    class="btn btn-outline-danger btn-sm"
-                   onclick="return confirm('�0�7Est��s seguro de ANULAR este registro? El valor ya no contar�� en el saldo.');">
+                   onclick="return anularMovimiento(<?php echo $m['id']; ?>, 'movimientos.php');">
                     <i class="bi bi-x-circle"></i>
                 </a>
                 <?php else: ?>
@@ -917,6 +917,16 @@ function abrirModalAnular(id) {
     document.getElementById('id_anular').value = id;
     var myModal = new bootstrap.Modal(document.getElementById('modalAnular'));
     myModal.show();
+}
+
+function anularMovimiento(id, ret) {
+    var m = prompt('Motivo de anulación (obligatorio):');
+    if (m === null) return false;              // canceló
+    m = m.trim();
+    if (m === '') { alert('Debes indicar un motivo para anular.'); return false; }
+    window.location.href = 'anular_movimiento.php?id=' + id +
+        '&return=' + encodeURIComponent(ret) + '&motivo=' + encodeURIComponent(m);
+    return false;
 }
 
 $(document).ready(function() {

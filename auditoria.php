@@ -5,9 +5,9 @@ require_once 'auth.php';
 verificar_auth();
 $conn->set_charset("utf8");
 
-// Solo CEO (3) y Administración (4)
+// Administrador (1), CEO (3) y Administración (4)
 $id_rol = intval($_SESSION["user_rol"] ?? 0);
-if (!in_array($id_rol, [3, 4])) { header("Location: index.php"); exit; }
+if (!in_array($id_rol, [1, 3, 4])) { header("Location: index.php"); exit; }
 
 require_once 'audit.php';
 auditoria_crear_tabla($conn); // asegura que la tabla exista
