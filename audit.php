@@ -50,6 +50,9 @@ function auditoria_crear_tabla($conn) {
 function registrar_auditoria($conn, $modulo, $accion, $id_registro = null, $detalle = '') {
     if (!$conn) return;
     static $intento_crear = false;
+    // Asegurar hora de Ecuador aunque la página que llama no la haya fijado
+    // (ej. login.php), para que la fecha/hora del log sea correcta.
+    date_default_timezone_set('America/Guayaquil');
 
     $fecha      = date('Y-m-d H:i:s');
     $id_usuario = isset($_SESSION['user_id']) ? intval($_SESSION['user_id']) : null;
