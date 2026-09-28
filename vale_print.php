@@ -52,10 +52,11 @@
         var color = esIngreso ? '#0097b2' : '#d32f2f';
         var bg    = esIngreso ? '#e0f7fa' : '#ffebee';
         var monto = Math.max(rec, ent);
+        var seqVis = d.seq || d.id;
 
         var html =
         '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
-        '<title>Vale #' + esc(d.id) + '</title><style>' +
+        '<title>Vale #' + esc(seqVis) + '</title><style>' +
         'body{font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;font-size:13px;color:#333;}' +
         '.vale-container{border:2px solid #000;border-left:15px solid ' + color + ';padding:25px;width:600px;margin:30px auto;background:#fff;box-shadow:5px 5px 15px rgba(0,0,0,.1);}' +
         '.header{text-align:center;border-bottom:2px solid ' + color + ';margin-bottom:20px;padding-bottom:10px;}' +
@@ -75,7 +76,7 @@
         '</style></head><body onload="window.print();">' +
         '<div class="vale-container">' +
           '<div class="header"><h3>OFICINA: ' + esc(VALE_OFICINA) + '</h3>' +
-            '<span class="tipo-movimiento">' + tipo + ' #' + esc(d.id) + '</span></div>' +
+            '<span class="tipo-movimiento">' + tipo + ' #' + esc(seqVis) + '</span></div>' +
           '<div class="info-row"><div><strong>Fecha:</strong> ' + esc(fechaDMY(d.fecha)) + '</div>' +
             '<div class="monto-box"><span class="monto-label">TOTAL RECIBIDO/ENTREGADO</span>' +
             '<span class="monto-valor">$' + money(monto) + '</span></div></div>' +

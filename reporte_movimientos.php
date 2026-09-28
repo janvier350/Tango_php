@@ -194,6 +194,8 @@ $usuario = $_SESSION["user_name"] ?? ($_SESSION["user_id"] ?? '');
                 <td></td>
             </tr>
             <?php
+            require_once 'secuencia.php';
+            $seqmap = mapa_secuencia_caja($conn, $id_oficina);
             $saldo = $saldo_inicial;
             foreach ($movs as $m):
                 $anulado = ($m['ESTADO'] == 'I');
@@ -201,7 +203,7 @@ $usuario = $_SESSION["user_name"] ?? ($_SESSION["user_id"] ?? '');
                 $aprobado = ($m['ID_USUARIO_REVISA'] > 0);
             ?>
             <tr class="<?php echo $anulado ? 'anulado' : ''; ?>">
-                <td class="cen"><?php echo $m['id']; ?></td>
+                <td class="cen" title="ID interno: <?php echo $m['id']; ?>"><?php echo $seqmap[$m['id']] ?? $m['id']; ?></td>
                 <td class="cen"><?php echo date('d-m-Y', strtotime($m['fecha'])); ?></td>
                 <td><?php echo htmlspecialchars($m['cuenta'] ?? '—'); ?></td>
                 <td><?php echo htmlspecialchars($m['concepto']); ?></td>
