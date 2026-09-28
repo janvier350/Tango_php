@@ -68,6 +68,10 @@ if (isset($_POST['reg_mov'])) {
             $fecha_reg, $id_proyecto, $intermediario2, $id_oficina, $estado);
 
         if ($stmt->execute()) {
+            $nuevo_id = $conn->insert_id;
+            require_once 'audit.php';
+            registrar_auditoria($conn, 'Movimientos', 'CREO', $nuevo_id,
+                'Concepto: ' . $concepto . ' | ' . $tipo . ' $' . number_format($monto, 2));
             header("Location: movimientos_mensajeria.php?msg=ok");
             exit;
         } else {

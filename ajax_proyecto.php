@@ -37,6 +37,8 @@ if ($action === 'crear') {
 
     if ($ins->execute()) {
         $new_id = $conn->insert_id;
+        require_once 'audit.php';
+        registrar_auditoria($conn, 'Proyecto', 'CREO', $new_id, 'Nuevo proyecto: ' . $nombre);
         echo json_encode(['success' => true, 'id' => $new_id, 'proyecto' => $nombre]);
     } else {
         echo json_encode(['success' => false, 'msg' => 'Error al guardar: ' . $ins->error]);

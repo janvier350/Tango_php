@@ -60,6 +60,9 @@ if (isset($_POST['guardar_arqueo'])) {
     if ($stmt_ins) {
         $stmt_ins->bind_param("iiddds", $id_oficina, $id_usuario, $real, $saldo_sistema, $dif, $obs);
         if ($stmt_ins->execute()) {
+            require_once 'audit.php';
+            registrar_auditoria($conn, 'Arqueo', 'REALIZO', $conn->insert_id,
+                'Efectivo: $' . number_format($real, 2) . ' | Sistema: $' . number_format($saldo_sistema, 2) . ' | Diferencia: $' . number_format($dif, 2));
             header("Location: arqueo.php?id_oficina=" . $id_oficina . "&msg=ok");
             exit;
         }

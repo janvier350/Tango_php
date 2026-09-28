@@ -71,6 +71,12 @@ if (isset($_GET['logout'])) {
         session_start();
     }
 
+    // Registrar el cierre de sesión antes de limpiar los datos
+    if (isset($conn) && file_exists(__DIR__ . '/audit.php')) {
+        require_once __DIR__ . '/audit.php';
+        registrar_auditoria($conn, 'Sesion', 'LOGOUT', $_SESSION['user_id'] ?? null, 'Cerró sesión');
+    }
+
     // Limpiamos y destruimos
     session_unset();
     session_destroy();

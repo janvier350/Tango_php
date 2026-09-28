@@ -83,7 +83,11 @@ if (isset($_POST['reg_mov'])) {
     
     
     if ($stmt->execute()) {
+        $nuevo_id = $conn->insert_id;
         $stmt->close();
+        require_once 'audit.php';
+        registrar_auditoria($conn, 'Movimientos', 'CREO', $nuevo_id,
+            'Concepto: ' . ($_POST['c'] ?? '') . ' | ' . ($_POST['tipo_flujo'] ?? '') . ' $' . number_format((float)($_POST['m'] ?? 0), 2));
         // REDIRECCI�0�7N CR�0�1TICA: Debe coincidir exactamente con el nombre de tu archivo
         header("Location: movimientos.php");
         exit();

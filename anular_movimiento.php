@@ -21,7 +21,14 @@ if (isset($_GET['id'])) {
 
     if ($stmt->execute()) {
         // Si no afectó filas, es porque ya estaba aprobado/anulado o no es del usuario
-        $msg = ($stmt->affected_rows > 0) ? 'anulado' : 'no_permitido';
+        $ok = ($stmt->affected_rows > 0);
+        if ($ok) {
+            require_once 'audit.php';
+            $motivo = trim($_POST['motivo'] ?? $_GET['motivo'] ?? '');
+            registrar_auditoria($conn, 'Movimientos', 'ANULO', $id,
+                'Anuló el movimiento' . ($motivo !== '' ? ' | Motivo: ' . $motivo : ''));
+        }
+        $msg = $ok ? 'anulado' : 'no_permitido';
         header("Location: $return?msg=$msg");
         exit();
     } else {

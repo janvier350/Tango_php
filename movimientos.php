@@ -74,7 +74,11 @@ if ($error_doc === '') {
     
     
     if ($stmt->execute()) {
+        $nuevo_id = $conn->insert_id;
         $stmt->close();
+        require_once 'audit.php';
+        $det_mov = 'Concepto: ' . ($_POST['c'] ?? '') . ' | ' . ($_POST['tipo_flujo'] ?? '') . ' $' . number_format((float)($_POST['m'] ?? 0), 2);
+        registrar_auditoria($conn, 'Movimientos', 'CREO', $nuevo_id, $det_mov);
         header("Location: movimientos.php");
         exit();
     } else {

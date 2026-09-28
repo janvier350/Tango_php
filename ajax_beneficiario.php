@@ -41,6 +41,9 @@ if ($action === 'crear') {
     $ins->bind_param("ssiss", $razon, $estado, $id_usuario, $fecha, $tipo);
 
     if ($ins->execute()) {
+        require_once 'audit.php';
+        registrar_auditoria($conn, 'Beneficiario', 'CREO', $conn->insert_id,
+            'Nuevo ' . ($tipo === 'I' ? 'intermediario' : 'beneficiario') . ': ' . $razon);
         echo json_encode(['success' => true, 'razon_social' => $razon, 'tipo' => $tipo]);
     } else {
         echo json_encode(['success' => false, 'msg' => 'Error al guardar: ' . $ins->error]);

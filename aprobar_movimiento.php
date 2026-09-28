@@ -31,6 +31,10 @@ if (isset($_GET['id'])) {
     $stmt->bind_param("isi", $id_jefe, $ahora, $id);
 
     if ($stmt->execute()) {
+        if ($stmt->affected_rows > 0) {
+            require_once 'audit.php';
+            registrar_auditoria($conn, 'Movimientos', 'APROBO', $id, 'Aprobó/revisó el movimiento');
+        }
         header("Location: $return?{$extra_params}msg=aprobado");
     } else {
         echo "Error al aprobar: " . $conn->error;

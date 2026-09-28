@@ -61,6 +61,8 @@ if ($action === 'actualizar') {
         $stmt2->execute();
         $row = $stmt2->get_result()->fetch_assoc();
         $label = $row ? $row['categoria'] . ' / ' . $row['detalle'] : '';
+        require_once 'audit.php';
+        registrar_auditoria($conn, 'Movimientos', 'EDITO', $id_movimiento, 'Cambió Inf. Financiera a: ' . $label);
         echo json_encode(['success' => true, 'label' => $label]);
     } else {
         echo json_encode(['success' => false, 'msg' => 'Error al actualizar: ' . $upd->error]);
