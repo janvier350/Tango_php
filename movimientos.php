@@ -530,6 +530,9 @@ if (!$filtro_enviado && $f_desde === '') {
         $stmt_ini->close();
     }
 
+    require_once 'secuencia.php';
+    $seqmap = mapa_secuencia_caja($conn, intval($_SESSION['oficina_ID']));
+
     while($m = $movs->fetch_assoc()):
         $es_anulado = ($m['ESTADO'] == 'I');
         
@@ -539,7 +542,7 @@ if (!$filtro_enviado && $f_desde === '') {
         }
     ?>
     <tr style="<?php echo $es_anulado ? 'background-color: #f8d7da; opacity: 0.6; text-decoration: line-through;' : ''; ?>">
-        <td class="text-center"><?php echo $m['id']; ?></td>
+        <td class="text-center" title="ID interno: <?php echo $m['id']; ?>"><?php echo $seqmap[$m['id']] ?? $m['id']; ?></td>
         <td class="text-center"><?php echo date('d-m-Y', strtotime($m['fecha'])); ?></td>
         <td class="text-center"><?php echo htmlspecialchars($m['nombre_proyecto'] ?? 'N/A'); ?></td>
         <td><?php echo strtoupper($m['intermediario']); ?></td>
@@ -582,6 +585,7 @@ if (!$filtro_enviado && $f_desde === '') {
             <div class="btn-group" role="group">
                 <button type="button" onclick="abrirValeDesdeBtn(this)" title="Imprimir Vale" class="btn btn-outline-primary btn-sm <?php echo $es_anulado ? 'disabled' : ''; ?>" <?php echo $es_anulado ? 'disabled' : ''; ?>
                    data-id="<?php echo $m['id']; ?>"
+                   data-seq="<?php echo $seqmap[$m['id']] ?? $m['id']; ?>"
                    data-fecha="<?php echo $m['fecha']; ?>"
                    data-rec="<?php echo $m['importe_recibido']; ?>"
                    data-ent="<?php echo $m['importe_entregado']; ?>"

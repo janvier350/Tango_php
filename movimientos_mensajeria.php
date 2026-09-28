@@ -226,6 +226,8 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                 </thead>
                 <tbody>
                 <?php
+                require_once 'secuencia.php';
+                $seqmap = mapa_secuencia_caja($conn, $id_oficina);
                 $saldo = 0;
                 foreach ($movs as $m):
                     $anulado  = ($m['ESTADO'] == 'I');
@@ -233,7 +235,7 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                     if (!$anulado) $saldo += ($m['importe_recibido'] - $m['importe_entregado']);
                 ?>
                     <tr style="<?php echo $anulado ? 'background:#f8d7da;opacity:.6;text-decoration:line-through;' : ''; ?>">
-                        <td class="text-center"><?php echo $m['id']; ?></td>
+                        <td class="text-center" title="ID interno: <?php echo $m['id']; ?>"><?php echo $seqmap[$m['id']] ?? $m['id']; ?></td>
                         <td class="text-center"><?php echo date('d-m-Y', strtotime($m['fecha'])); ?></td>
                         <td><?php echo htmlspecialchars($m['cuenta'] ?? '—'); ?></td>
                         <td><?php echo htmlspecialchars($m['concepto']); ?></td>
@@ -257,6 +259,7 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                                 <button type="button" onclick="abrirValeDesdeBtn(this)" title="Imprimir Vale"
                                    class="btn btn-outline-primary btn-sm <?php echo $anulado ? 'disabled' : ''; ?>" <?php echo $anulado ? 'disabled' : ''; ?>
                                    data-id="<?php echo $m['id']; ?>"
+                                   data-seq="<?php echo $seqmap[$m['id']] ?? $m['id']; ?>"
                                    data-fecha="<?php echo $m['fecha']; ?>"
                                    data-rec="<?php echo $m['importe_recibido']; ?>"
                                    data-ent="<?php echo $m['importe_entregado']; ?>"

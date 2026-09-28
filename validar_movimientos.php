@@ -242,7 +242,10 @@ $(document).ready(function() {
     $stmt_list->execute();
     $movs = $stmt_list->get_result();
 
-    while($m = $movs->fetch_assoc()): 
+    require_once 'secuencia.php';
+    $seqmap = mapa_secuencia_caja($conn, $id_oficina);
+
+    while($m = $movs->fetch_assoc()):
         $es_anulado = ($m['ESTADO'] == 'I');
         
         // CR�0�1TICO: Solo sumar al saldo si NO est�� anulado
@@ -251,7 +254,7 @@ $(document).ready(function() {
         }
     ?>
     <tr data-estado-rev="<?php echo $es_anulado ? 'anulado' : (($m['ID_USUARIO_REVISA'] > 0) ? 'aprobado' : 'pendiente'); ?>" data-proyecto="<?php echo htmlspecialchars($m['nombre_proyecto'] ?? ''); ?>" data-fecha="<?php echo date('Y-m-d', strtotime($m['fecha'])); ?>" style="<?php echo $es_anulado ? 'background-color: #f8d7da; opacity: 0.6; text-decoration: line-through;' : ''; ?>">
-        <td class="text-center"><?php echo $m['id']; ?></td>
+        <td class="text-center" title="ID interno: <?php echo $m['id']; ?>"><?php echo $seqmap[$m['id']] ?? $m['id']; ?></td>
         <td class="text-center"><?php echo date('d-m-Y', strtotime($m['fecha'])); ?></td>
         <td class="text-center"><?php echo htmlspecialchars($m['nombre_proyecto'] ?? 'N/A'); ?></td>
         <td><?php echo strtoupper($m['intermediario']); ?></td>

@@ -6,6 +6,7 @@ date_default_timezone_set('America/Guayaquil');
 require_once 'config.php';
 require_once 'auth.php';
 verificar_auth();
+require_once 'secuencia.php';
 $conn->set_charset("utf8");
 
 $id_rol         = intval($_SESSION["user_rol"] ?? 0);
@@ -83,7 +84,7 @@ header('Expires: 0');
 echo "\xEF\xBB\xBF"; // BOM UTF-8 para que Excel muestre bien los acentos
 $out = fopen('php://output', 'w');
 
-$cabecera = ['Secuencia','Fecha','Caja','Categoria','Cuenta (Inf.Fin)','Proyecto',
+$cabecera = ['Secuencia','ID interno','Fecha','Caja','Categoria','Cuenta (Inf.Fin)','Proyecto',
              'Beneficiario','Intermediario','Concepto','Empresa','Doc. Soporte',
              'Banco','Cheque','Ingreso','Egreso','Neto','Saldo periodo','Estado',
              'Registrado por','Revisado por','Fecha registro'];
@@ -103,7 +104,9 @@ while ($m = $res->fetch_assoc()) {
     $anulado = ($m['ESTADO'] === 'I');
     if (!$anulado) { $saldo += $neto; $tot_ing += $ing; $tot_egr += $egr; }
 
+    $seqmap_caja = mapa_secuencia_caja($conn, (int)$m['ID_OFICINA']);
     fputcsv($out, [
+        $seqmap_caja[(int)$m['id']] ?? $m['id'],
         $m['id'],
         date('d/m/Y', strtotime($m['fecha'])),
         $m['caja'] ?? '',
@@ -130,7 +133,7 @@ while ($m = $res->fetch_assoc()) {
 
 // Fila de totales (solo activos)
 fputcsv($out, [], ';');
-fputcsv($out, ['','','','','','','','','','','','','TOTALES',
+fputcsv($out, ['','','','','','','','','','','','','','TOTALES',
                $fnum($tot_ing), $fnum($tot_egr), $fnum($tot_ing - $tot_egr), '', '', '', '', ''], ';');
 
 fclose($out);
