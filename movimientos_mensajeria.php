@@ -128,8 +128,10 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
     <div class="container-fluid px-3 mt-3">
 
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <?php require_once 'secuencia.php'; $total_caja = count(mapa_secuencia_caja($conn, $id_oficina)); ?>
             <h4 class="fw-bold mb-0"><i class="bi bi-scooter me-2"></i>Caja
                 <span class="badge bg-dark"><?php echo htmlspecialchars($nombre_caja); ?></span>
+                <span class="text-muted fw-normal fs-6 ms-1"><?php echo $total_caja; ?> movimientos</span>
             </h4>
             <div class="d-flex gap-2 flex-wrap">
                 <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalExportExcel">
@@ -239,7 +241,7 @@ $movs = $stmt_l->get_result()->fetch_all(MYSQLI_ASSOC);
                     if (!$anulado) $saldo += ($m['importe_recibido'] - $m['importe_entregado']);
                 ?>
                     <tr style="<?php echo $anulado ? 'background:#f8d7da;opacity:.6;text-decoration:line-through;' : ''; ?>">
-                        <td class="text-center" title="ID interno: <?php echo $m['id']; ?>"><?php echo $seqmap[$m['id']] ?? $m['id']; ?></td>
+                        <td class="text-center"><?php echo $seqmap[$m['id']] ?? $m['id']; ?><br><span class="text-muted" style="font-size:.7rem;">#<?php echo $m['id']; ?></span></td>
                         <td class="text-center"><?php echo date('d-m-Y', strtotime($m['fecha'])); ?></td>
                         <td><?php echo htmlspecialchars($m['cuenta'] ?? '—'); ?></td>
                         <td><?php echo htmlspecialchars($m['concepto']); ?></td>

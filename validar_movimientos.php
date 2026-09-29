@@ -170,7 +170,10 @@ $(document).ready(function() {
             <div class="card-body d-flex justify-content-between align-items-start">
               <div>
               <!-- cabecera formulario -->
-                 <h1> Caja <?php echo htmlspecialchars($nombre_oficina_caja); ?> </h1>
+                 <?php require_once 'secuencia.php'; $total_caja = count(mapa_secuencia_caja($conn, $id_oficina)); ?>
+                 <h1> Caja <?php echo htmlspecialchars($nombre_oficina_caja); ?>
+                    <small class="text-muted fs-6"><?php echo $total_caja; ?> movimientos</small>
+                 </h1>
                  <p> validacion de movimientos como CEO </p>
               </div>
               <div class="d-flex gap-2">
@@ -258,7 +261,7 @@ $(document).ready(function() {
         }
     ?>
     <tr data-estado-rev="<?php echo $es_anulado ? 'anulado' : (($m['ID_USUARIO_REVISA'] > 0) ? 'aprobado' : 'pendiente'); ?>" data-proyecto="<?php echo htmlspecialchars($m['nombre_proyecto'] ?? ''); ?>" data-fecha="<?php echo date('Y-m-d', strtotime($m['fecha'])); ?>" style="<?php echo $es_anulado ? 'background-color: #f8d7da; opacity: 0.6; text-decoration: line-through;' : ''; ?>">
-        <td class="text-center" title="ID interno: <?php echo $m['id']; ?>"><?php echo $seqmap[$m['id']] ?? $m['id']; ?></td>
+        <td class="text-center"><?php echo $seqmap[$m['id']] ?? $m['id']; ?><br><span class="text-muted" style="font-size:.7rem;">#<?php echo $m['id']; ?></span></td>
         <td class="text-center"><?php echo date('d-m-Y', strtotime($m['fecha'])); ?></td>
         <td class="text-center"><?php echo htmlspecialchars($m['nombre_proyecto'] ?? 'N/A'); ?></td>
         <td><?php echo strtoupper($m['intermediario']); ?></td>

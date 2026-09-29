@@ -197,9 +197,11 @@ if (!$filtro_enviado && $f_desde === '') {
     
     <div class="container-fluid px-4 mt-3">
 
+        <?php require_once 'secuencia.php'; $seqmap = mapa_secuencia_caja($conn, intval($_SESSION['oficina_ID'])); $total_caja = count($seqmap); ?>
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h4 class="fw-bold mb-0"><i class="bi bi-cash-stack me-2"></i>Caja
                 <span class="badge bg-dark"><?php echo htmlspecialchars($_SESSION["oficina"]); ?></span>
+                <span class="text-muted fw-normal fs-6 ms-1"><?php echo $total_caja; ?> movimientos</span>
             </h4>
             <div class="d-flex gap-2 flex-wrap">
                 <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalExportExcel">
@@ -546,7 +548,7 @@ if (!$filtro_enviado && $f_desde === '') {
         }
     ?>
     <tr style="<?php echo $es_anulado ? 'background-color: #f8d7da; opacity: 0.6; text-decoration: line-through;' : ''; ?>">
-        <td class="text-center" title="ID interno: <?php echo $m['id']; ?>"><?php echo $seqmap[$m['id']] ?? $m['id']; ?></td>
+        <td class="text-center" data-order="<?php echo $seqmap[$m['id']] ?? $m['id']; ?>"><?php echo $seqmap[$m['id']] ?? $m['id']; ?><br><span class="text-muted" style="font-size:.7rem;">#<?php echo $m['id']; ?></span></td>
         <td class="text-center"><?php echo date('d-m-Y', strtotime($m['fecha'])); ?></td>
         <td class="text-center"><?php echo htmlspecialchars($m['nombre_proyecto'] ?? 'N/A'); ?></td>
         <td><?php echo strtoupper($m['intermediario']); ?></td>
