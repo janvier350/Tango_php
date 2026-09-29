@@ -203,7 +203,7 @@ $usuario = $_SESSION["user_name"] ?? ($_SESSION["user_id"] ?? '');
                 $aprobado = ($m['ID_USUARIO_REVISA'] > 0);
             ?>
             <tr class="<?php echo $anulado ? 'anulado' : ''; ?>">
-                <td class="cen" title="ID interno: <?php echo $m['id']; ?>"><?php echo $seqmap[$m['id']] ?? $m['id']; ?></td>
+                <td class="cen"><?php echo $seqmap[$m['id']] ?? $m['id']; ?> <span style="color:#999;font-size:.85em;">(#<?php echo $m['id']; ?>)</span></td>
                 <td class="cen"><?php echo date('d-m-Y', strtotime($m['fecha'])); ?></td>
                 <td><?php echo htmlspecialchars($m['cuenta'] ?? '—'); ?></td>
                 <td><?php echo htmlspecialchars($m['concepto']); ?></td>
