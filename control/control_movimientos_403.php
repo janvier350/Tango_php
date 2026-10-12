@@ -341,11 +341,7 @@ ORDER BY m.fecha ASC, m.id ASC");
             EDITAR
         </a>
         
-        <a href="eliminar_movimiento.php?id=<?php echo $m['id']; ?>" 
-           class="btn btn-outline-danger btn-sm" 
-           onclick="return confirm('¿Estás seguro de eliminar este registro?');" title="Eliminar">
-            BORRAR
-        </a>
+        <!-- Borrado físico deshabilitado: usar Anular -->
     </div>
 </td>
 
