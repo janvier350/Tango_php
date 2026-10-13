@@ -10,14 +10,13 @@ $id_rol     = $_SESSION["user_rol"];
 $id_usuario = $_SESSION["user_id"];
 $id_oficina = intval($_SESSION["oficina_ID"]);
 
-// Esta pantalla es solo para cajas independientes (ej. Caja Mensajeria).
-// Si el usuario no opera una caja independiente, lo mandamos al registro normal.
-$es_indep = 0;
-if (col_existe($conn, 'CTR_OFICINA', 'ES_INDEPENDIENTE')) {
-    $r = $conn->query("SELECT ES_INDEPENDIENTE FROM CTR_OFICINA WHERE ID_OFICINA = " . $id_oficina);
-    $es_indep = $r ? (int)($r->fetch_assoc()['ES_INDEPENDIENTE'] ?? 0) : 0;
-}
-if (!$es_indep && !in_array($id_rol, [3, 4])) {
+// Esta pantalla (formulario simplificado) es solo para cajas con FORM_SIMPLE
+// (ej. Caja Mensajería). Las demás cajas usan el registro normal (401, 403,
+// ROMERIA, etc.), aunque sean independientes.
+require_once 'oficina_schema.php';
+asegurar_form_simple($conn);
+$usa_simple = oficina_usa_form_simple($conn, $id_oficina);
+if (!$usa_simple && !in_array($id_rol, [3, 4])) {
     header("Location: movimientos.php");
     exit;
 }

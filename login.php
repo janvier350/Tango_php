@@ -1,10 +1,12 @@
 <?php
 require_once 'config.php';
+require_once 'oficina_schema.php';
 session_start();
 
 $error = "";
 
 if (isset($_POST['login'])) {
+    asegurar_form_simple($conn); // crea/migra la columna FORM_SIMPLE si hace falta
     $u = $conn->real_escape_string($_POST['u']);
     $p = $_POST['p'];
 
@@ -20,6 +22,11 @@ if (isset($_POST['login'])) {
             $_SESSION['oficina_ROL'] = $user['ROL']; //
             $_SESSION['oficina_ID'] = $user['ID_CTR_OFICINA']; //
             $_SESSION['oficina_independiente'] = isset($user['ES_INDEPENDIENTE']) ? (int)$user['ES_INDEPENDIENTE'] : 0;
+            // FORM_SIMPLE decide el formulario (simplificado tipo Mensajería vs completo).
+            // Si la columna no existe aún, cae al comportamiento anterior (ES_INDEPENDIENTE).
+            $_SESSION['oficina_form_simple'] = isset($user['FORM_SIMPLE'])
+                ? (int)$user['FORM_SIMPLE']
+                : (isset($user['ES_INDEPENDIENTE']) ? (int)$user['ES_INDEPENDIENTE'] : 0);
             require_once 'audit.php';
             registrar_auditoria($conn, 'Sesion', 'LOGIN', $user['id'], 'Inició sesión');
             header("Location: index.php");

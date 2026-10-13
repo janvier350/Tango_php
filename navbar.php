@@ -15,7 +15,15 @@
         
         <a class="nav-link px-3" href="index.php"><i class="bi bi-people me-1"></i> Home</a> 
         <?php if($_SESSION['user_rol'] == 2): ?>
-        <?php $mov_link = !empty($_SESSION['oficina_independiente']) ? 'movimientos_mensajeria.php' : 'movimientos.php'; ?>
+        <?php
+        // El formulario simplificado (tipo Mensajería) se decide por FORM_SIMPLE.
+        // Para sesiones iniciadas antes del cambio (sin la clave) se usa el flag
+        // anterior oficina_independiente como respaldo.
+        $usa_form_simple = isset($_SESSION['oficina_form_simple'])
+            ? !empty($_SESSION['oficina_form_simple'])
+            : !empty($_SESSION['oficina_independiente']);
+        $mov_link = $usa_form_simple ? 'movimientos_mensajeria.php' : 'movimientos.php';
+        ?>
         <a class="nav-link px-3" href="<?php echo $mov_link; ?>"><i class="bi bi-journal-text me-1"></i> Movimientos</a>
         <a class="nav-link px-3 text-warning fw-bold" href="arqueo.php"><i class="bi bi-calculator me-1"></i> Arqueo</a>
         <a class="nav-link px-3" href="glosario_inf_financiera.php"><i class="bi bi-journal-text me-1"></i> Glosario Inf. Financiera</a>
