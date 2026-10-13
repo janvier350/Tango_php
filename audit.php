@@ -29,12 +29,41 @@ function auditoria_crear_tabla($conn) {
         id_registro VARCHAR(60) NULL,
         detalle TEXT NULL,
         ip VARCHAR(60) NULL,
+        user_agent VARCHAR(400) NULL,
         PRIMARY KEY (id),
         KEY idx_fecha (fecha_hora),
         KEY idx_usuario (id_usuario),
         KEY idx_modulo (modulo),
         KEY idx_accion (accion)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    // Agregar la columna user_agent si la tabla ya existía sin ella.
+    $r = @$conn->query("SHOW COLUMNS FROM auditoria LIKE 'user_agent'");
+    if ($r && $r->num_rows === 0) {
+        @$conn->query("ALTER TABLE auditoria ADD COLUMN user_agent VARCHAR(400) NULL");
+    }
+}
+
+// Parsea el User-Agent a Dispositivo / Sistema Operativo / Navegador.
+function auditoria_parse_ua($ua) {
+    $ua = (string)$ua;
+    if ($ua === '') return ['dispositivo' => '—', 'so' => '—', 'navegador' => '—'];
+    $d = 'Computadora'; $so = '—'; $nav = '—';
+    if (preg_match('/iPad|Tablet/i', $ua)) $d = 'Tablet';
+    elseif (preg_match('/Mobile|iPhone|iPod|Android/i', $ua) && preg_match('/Mobile/i', $ua)) $d = 'Celular';
+    elseif (preg_match('/iPhone|iPod/i', $ua)) $d = 'Celular';
+
+    if (preg_match('/Windows NT/i', $ua)) $so = 'Windows';
+    elseif (preg_match('/iPhone|iPad|iPod/i', $ua)) $so = 'iOS';
+    elseif (preg_match('/Android/i', $ua)) $so = 'Android';
+    elseif (preg_match('/Macintosh|Mac OS X/i', $ua)) $so = 'macOS';
+    elseif (preg_match('/Linux/i', $ua)) $so = 'Linux';
+
+    if (preg_match('/Edg\//i', $ua)) $nav = 'Edge';
+    elseif (preg_match('/OPR\/|Opera/i', $ua)) $nav = 'Opera';
+    elseif (preg_match('/Firefox\//i', $ua)) $nav = 'Firefox';
+    elseif (preg_match('/Chrome\//i', $ua)) $nav = 'Chrome';
+    elseif (preg_match('/Safari\//i', $ua)) $nav = 'Safari';
+    return ['dispositivo' => $d, 'so' => $so, 'navegador' => $nav];
 }
 
 /**
@@ -60,25 +89,26 @@ function registrar_auditoria($conn, $modulo, $accion, $id_registro = null, $deta
     $rol        = isset($_SESSION['user_rol']) ? auditoria_map_rol($_SESSION['user_rol']) : '';
     $oficina    = $_SESSION['oficina'] ?? '';
     $ip         = $_SERVER['REMOTE_ADDR'] ?? '';
+    $ua         = substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 400);
     $idr        = ($id_registro !== null && $id_registro !== '') ? (string)$id_registro : null;
     $detalle    = (string)$detalle;
 
     $sql = "INSERT INTO auditoria
-            (fecha_hora,id_usuario,usuario,rol,oficina,modulo,accion,id_registro,detalle,ip)
-            VALUES (?,?,?,?,?,?,?,?,?,?)";
+            (fecha_hora,id_usuario,usuario,rol,oficina,modulo,accion,id_registro,detalle,ip,user_agent)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)";
 
     $stmt = @$conn->prepare($sql);
     if (!$stmt && !$intento_crear) {
-        // Probablemente la tabla no existe: intentar crearla una vez y reintentar.
+        // Probablemente la tabla/columna no existe: crearla/ajustarla y reintentar.
         $intento_crear = true;
         auditoria_crear_tabla($conn);
         $stmt = @$conn->prepare($sql);
     }
     if (!$stmt) return;
 
-    $stmt->bind_param("sissssssss",
+    $stmt->bind_param("sisssssssss",
         $fecha, $id_usuario, $usuario, $rol, $oficina,
-        $modulo, $accion, $idr, $detalle, $ip);
+        $modulo, $accion, $idr, $detalle, $ip, $ua);
     @$stmt->execute();
     $stmt->close();
 }

@@ -9,6 +9,7 @@ if ($_SESSION['user_rol'] != 1) {
 
 require_once 'oficina_schema.php';
 asegurar_form_simple($conn); // asegura la columna FORM_SIMPLE
+require_once 'audit.php';
 
 $mensaje  = '';
 $tipo_msg = '';
@@ -33,6 +34,8 @@ if (isset($_POST['registrar_user'])) {
             $stmt = $conn->prepare("INSERT INTO usuarios (nombres, usuario, clave, ID_ROL, ID_CTR_OFICINA) VALUES (?, ?, ?, ?, ?)");
             if ($stmt) { $stmt->bind_param("sssii", $nombre, $usuario, $hash, $id_rol, $id_ofic); }
             if ($stmt && $stmt->execute()) {
+                registrar_auditoria($conn, 'Usuarios', 'CREO', $conn->insert_id,
+                    "Creó usuario '$usuario' ($nombre) · rol id $id_rol · oficina id $id_ofic");
                 $mensaje = "Usuario <strong>$usuario</strong> creado correctamente."; $tipo_msg = 'success';
             } else {
                 $mensaje = 'Error: <code>' . htmlspecialchars($conn->error ?: ($stmt ? $stmt->error : 'Error prepare')) . '</code>';
@@ -51,6 +54,8 @@ if (isset($_POST['editar_usuario'])) {
         $upd = $conn->prepare("UPDATE usuarios SET ID_ROL = ?, ID_CTR_OFICINA = ? WHERE id = ?");
         $upd->bind_param("iii", $id_rol, $id_ofic, $id_edit);
         if ($upd->execute()) {
+            registrar_auditoria($conn, 'Usuarios', 'EDITO', $id_edit,
+                "Editó usuario id $id_edit · nuevo rol id $id_rol · oficina id $id_ofic");
             $mensaje = 'Usuario actualizado correctamente.'; $tipo_msg = 'success';
         } else {
             $mensaje = 'Error al actualizar: <code>' . htmlspecialchars($conn->error) . '</code>'; $tipo_msg = 'danger';
@@ -64,8 +69,13 @@ if (isset($_POST['editar_usuario'])) {
 if (isset($_GET['borrar'])) {
     $id = intval($_GET['borrar']);
     if ($id > 0 && $id !== (int)$_SESSION['user_id']) {
+        $qn = $conn->query("SELECT usuario FROM usuarios WHERE id = " . $id);
+        $nom_u = $qn ? ($qn->fetch_assoc()['usuario'] ?? '') : '';
         $del = $conn->prepare("DELETE FROM usuarios WHERE id = ?");
         $del->bind_param("i", $id); $del->execute();
+        if ($del->affected_rows > 0) {
+            registrar_auditoria($conn, 'Usuarios', 'ELIMINO', $id, "Eliminó usuario '$nom_u' (id $id)");
+        }
         $mensaje = 'Usuario eliminado.'; $tipo_msg = 'success';
     }
 }
@@ -99,6 +109,8 @@ if (isset($_POST['crear_oficina'])) {
                 $notas = [];
                 if ($hay_indep && $es_indep) $notas[] = 'no se suma al total';
                 $notas[] = ($hay_simple && $form_simple) ? 'formulario simplificado (Mensajería)' : 'formulario completo (como 401/403)';
+                registrar_auditoria($conn, 'Oficinas', 'CREO', $conn->insert_id,
+                    "Creó oficina '$nom_ofic' · " . implode(', ', $notas));
                 $mensaje = "Oficina <strong>$nom_ofic</strong> creada: " . implode(', ', $notas) . '.'; $tipo_msg = 'success';
             } else {
                 $mensaje = 'Error: <code>' . htmlspecialchars($conn->error) . '</code>'; $tipo_msg = 'danger';
@@ -117,8 +129,13 @@ if (isset($_GET['borrar_ofic'])) {
     if ($cnt > 0) {
         $mensaje = 'No se puede eliminar: la oficina tiene usuarios asignados.'; $tipo_msg = 'warning';
     } else {
+        $qo = $conn->query("SELECT OFICINA FROM CTR_OFICINA WHERE ID_OFICINA = " . $id_o);
+        $nom_o = $qo ? ($qo->fetch_assoc()['OFICINA'] ?? '') : '';
         $del2 = $conn->prepare("DELETE FROM CTR_OFICINA WHERE ID_OFICINA = ?");
         $del2->bind_param("i", $id_o); $del2->execute();
+        if ($del2->affected_rows > 0) {
+            registrar_auditoria($conn, 'Oficinas', 'ELIMINO', $id_o, "Eliminó oficina '$nom_o' (id $id_o)");
+        }
         $mensaje = 'Oficina eliminada.'; $tipo_msg = 'success';
     }
 }
