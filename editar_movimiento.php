@@ -14,17 +14,14 @@ $m = $stmt->get_result()->fetch_assoc();
 
 if (!$m) { die("Acceso denegado o registro no encontrado."); }
 
-// ¿El usuario opera una caja independiente (ej. Caja Mensajería)?
-// En ese caso mostramos el formulario simplificado, igual al de registro.
-// Se recalcula desde CTR_OFICINA (no solo desde la sesión, que puede estar
-// desactualizada) para que coincida con movimientos_mensajeria.php.
-$es_indep = !empty($_SESSION['oficina_independiente']);
-$id_oficina_actual = intval($_SESSION['oficina_ID'] ?? 0);
-if (!$es_indep && $id_oficina_actual > 0 && col_existe($conn, 'CTR_OFICINA', 'ES_INDEPENDIENTE')) {
-    $r_ind = $conn->query("SELECT ES_INDEPENDIENTE FROM CTR_OFICINA WHERE ID_OFICINA = " . $id_oficina_actual);
-    $es_indep = $r_ind ? (int)($r_ind->fetch_assoc()['ES_INDEPENDIENTE'] ?? 0) : 0;
-}
-$es_indep = (bool)$es_indep;
+// ¿El usuario opera una caja con formulario simplificado (tipo Mensajería)?
+// En ese caso mostramos el formulario simplificado; si no (401, 403, ROMERIA,
+// etc.) mostramos el formulario completo. Se decide por FORM_SIMPLE de la
+// oficina del movimiento, no solo por la sesión.
+require_once 'oficina_schema.php';
+asegurar_form_simple($conn);
+$id_oficina_mov = intval($m['ID_OFICINA'] ?? ($_SESSION['oficina_ID'] ?? 0));
+$es_indep = oficina_usa_form_simple($conn, $id_oficina_mov);
 
 // No se puede editar un movimiento ya aprobado o anulado (defensa server-side)
 if ($m['ID_USUARIO_REVISA'] > 0 || $m['ESTADO'] === 'I') {

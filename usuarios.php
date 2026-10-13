@@ -7,6 +7,9 @@ if ($_SESSION['user_rol'] != 1) {
     header("Location: index.php"); exit;
 }
 
+require_once 'oficina_schema.php';
+asegurar_form_simple($conn); // asegura la columna FORM_SIMPLE
+
 $mensaje  = '';
 $tipo_msg = '';
 
@@ -69,8 +72,9 @@ if (isset($_GET['borrar'])) {
 
 // ── Crear oficina ────────────────────────────────────────────────────
 if (isset($_POST['crear_oficina'])) {
-    $nom_ofic = strtoupper(trim($_POST['nom_oficina'] ?? ''));
-    $es_indep = isset($_POST['es_independiente']) ? 1 : 0;
+    $nom_ofic   = strtoupper(trim($_POST['nom_oficina'] ?? ''));
+    $es_indep   = isset($_POST['es_independiente']) ? 1 : 0;
+    $form_simple = isset($_POST['form_simple']) ? 1 : 0;
     if ($nom_ofic === '') {
         $mensaje = 'El nombre de la oficina no puede estar vacío.'; $tipo_msg = 'danger';
     } else {
@@ -79,8 +83,12 @@ if (isset($_POST['crear_oficina'])) {
         if ($chk2->num_rows > 0) {
             $mensaje = "La oficina <strong>$nom_ofic</strong> ya existe."; $tipo_msg = 'warning';
         } else {
-            $hay_col = col_existe($conn, 'CTR_OFICINA', 'ES_INDEPENDIENTE');
-            if ($hay_col) {
+            $hay_indep  = col_existe($conn, 'CTR_OFICINA', 'ES_INDEPENDIENTE');
+            $hay_simple = col_existe($conn, 'CTR_OFICINA', 'FORM_SIMPLE');
+            if ($hay_indep && $hay_simple) {
+                $ins = $conn->prepare("INSERT INTO CTR_OFICINA (OFICINA, ES_INDEPENDIENTE, FORM_SIMPLE) VALUES (?, ?, ?)");
+                $ins->bind_param("sii", $nom_ofic, $es_indep, $form_simple);
+            } elseif ($hay_indep) {
                 $ins = $conn->prepare("INSERT INTO CTR_OFICINA (OFICINA, ES_INDEPENDIENTE) VALUES (?, ?)");
                 $ins->bind_param("si", $nom_ofic, $es_indep);
             } else {
@@ -88,8 +96,10 @@ if (isset($_POST['crear_oficina'])) {
                 $ins->bind_param("s", $nom_ofic);
             }
             if ($ins->execute()) {
-                $extra = ($hay_col && $es_indep) ? ' (independiente: no se suma al total)' : '';
-                $mensaje = "Oficina <strong>$nom_ofic</strong> creada correctamente.$extra"; $tipo_msg = 'success';
+                $notas = [];
+                if ($hay_indep && $es_indep) $notas[] = 'no se suma al total';
+                $notas[] = ($hay_simple && $form_simple) ? 'formulario simplificado (Mensajería)' : 'formulario completo (como 401/403)';
+                $mensaje = "Oficina <strong>$nom_ofic</strong> creada: " . implode(', ', $notas) . '.'; $tipo_msg = 'success';
             } else {
                 $mensaje = 'Error: <code>' . htmlspecialchars($conn->error) . '</code>'; $tipo_msg = 'danger';
             }
@@ -344,10 +354,17 @@ $tab_activa = $_GET['tab'] ?? 'usuarios';
                                    style="text-transform:uppercase;">
                             <div class="form-text">Se guardará en mayúsculas.</div>
                         </div>
-                        <div class="form-check mb-3">
+                        <div class="form-check mb-2">
                             <input type="checkbox" class="form-check-input" id="es_independiente" name="es_independiente" value="1">
                             <label class="form-check-label small" for="es_independiente">
                                 Caja <strong>independiente</strong> (no se suma al total; se maneja sola, como Mensajería)
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="form_simple" name="form_simple" value="1">
+                            <label class="form-check-label small" for="form_simple">
+                                Usa <strong>formulario simplificado</strong> (tipo Mensajería).
+                                <span class="text-muted">Déjalo sin marcar para el formulario completo (como 401/403).</span>
                             </label>
                         </div>
                         <button name="crear_oficina" class="btn btn-success btn-sm w-100">
