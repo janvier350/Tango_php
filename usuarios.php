@@ -70,6 +70,7 @@ if (isset($_GET['borrar'])) {
 // ── Crear oficina ────────────────────────────────────────────────────
 if (isset($_POST['crear_oficina'])) {
     $nom_ofic = strtoupper(trim($_POST['nom_oficina'] ?? ''));
+    $es_indep = isset($_POST['es_independiente']) ? 1 : 0;
     if ($nom_ofic === '') {
         $mensaje = 'El nombre de la oficina no puede estar vacío.'; $tipo_msg = 'danger';
     } else {
@@ -78,10 +79,17 @@ if (isset($_POST['crear_oficina'])) {
         if ($chk2->num_rows > 0) {
             $mensaje = "La oficina <strong>$nom_ofic</strong> ya existe."; $tipo_msg = 'warning';
         } else {
-            $ins = $conn->prepare("INSERT INTO CTR_OFICINA (OFICINA) VALUES (?)");
-            $ins->bind_param("s", $nom_ofic);
+            $hay_col = col_existe($conn, 'CTR_OFICINA', 'ES_INDEPENDIENTE');
+            if ($hay_col) {
+                $ins = $conn->prepare("INSERT INTO CTR_OFICINA (OFICINA, ES_INDEPENDIENTE) VALUES (?, ?)");
+                $ins->bind_param("si", $nom_ofic, $es_indep);
+            } else {
+                $ins = $conn->prepare("INSERT INTO CTR_OFICINA (OFICINA) VALUES (?)");
+                $ins->bind_param("s", $nom_ofic);
+            }
             if ($ins->execute()) {
-                $mensaje = "Oficina <strong>$nom_ofic</strong> creada correctamente."; $tipo_msg = 'success';
+                $extra = ($hay_col && $es_indep) ? ' (independiente: no se suma al total)' : '';
+                $mensaje = "Oficina <strong>$nom_ofic</strong> creada correctamente.$extra"; $tipo_msg = 'success';
             } else {
                 $mensaje = 'Error: <code>' . htmlspecialchars($conn->error) . '</code>'; $tipo_msg = 'danger';
             }
@@ -131,11 +139,12 @@ if ($res_ulist) {
 }
 
 // Oficinas con conteo de usuarios
+$col_ind_list = col_existe($conn, 'CTR_OFICINA', 'ES_INDEPENDIENTE') ? 'o.ES_INDEPENDIENTE' : '0';
 $res_ofic_list = $conn->query("
-    SELECT o.ID_OFICINA, o.OFICINA, COUNT(u.id) AS total_usuarios
+    SELECT o.ID_OFICINA, o.OFICINA, $col_ind_list AS es_independiente, COUNT(u.id) AS total_usuarios
     FROM CTR_OFICINA o
     LEFT JOIN usuarios u ON u.ID_CTR_OFICINA = o.ID_OFICINA
-    GROUP BY o.ID_OFICINA, o.OFICINA
+    GROUP BY o.ID_OFICINA, o.OFICINA, es_independiente
     ORDER BY o.OFICINA
 ");
 $ofic_list = $res_ofic_list ? $res_ofic_list->fetch_all(MYSQLI_ASSOC) : [];
@@ -335,6 +344,12 @@ $tab_activa = $_GET['tab'] ?? 'usuarios';
                                    style="text-transform:uppercase;">
                             <div class="form-text">Se guardará en mayúsculas.</div>
                         </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="es_independiente" name="es_independiente" value="1">
+                            <label class="form-check-label small" for="es_independiente">
+                                Caja <strong>independiente</strong> (no se suma al total; se maneja sola, como Mensajería)
+                            </label>
+                        </div>
                         <button name="crear_oficina" class="btn btn-success btn-sm w-100">
                             <i class="bi bi-plus-circle me-1"></i> Crear Oficina
                         </button>
@@ -364,7 +379,11 @@ $tab_activa = $_GET['tab'] ?? 'usuarios';
                         <?php foreach ($ofic_list as $oo): ?>
                         <tr>
                             <td class="text-muted small"><?php echo $oo['ID_OFICINA']; ?></td>
-                            <td class="fw-semibold"><?php echo htmlspecialchars($oo['OFICINA']); ?></td>
+                            <td class="fw-semibold"><?php echo htmlspecialchars($oo['OFICINA']); ?>
+                                <?php if (!empty($oo['es_independiente'])): ?>
+                                <span class="badge bg-dark ms-1" style="font-size:.6rem;">independiente</span>
+                                <?php endif; ?>
+                            </td>
                             <td class="text-center">
                                 <span class="badge <?php echo $oo['total_usuarios'] > 0 ? 'bg-primary' : 'bg-secondary'; ?>">
                                     <?php echo $oo['total_usuarios']; ?>
