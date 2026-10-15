@@ -46,12 +46,13 @@ if (($_GET['export'] ?? '') === 'csv' && $tabla_ok) {
     header('Content-Disposition: attachment; filename="auditoria_' . date('Ymd_His') . '.csv"');
     echo "\xEF\xBB\xBF";
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['Fecha/hora','Usuario','Rol','Oficina','Modulo','Accion','Id registro','Detalle','IP','Dispositivo','Sistema Operativo','Navegador'], ';');
+    fputcsv($out, ['Fecha/hora','Usuario','Rol','Oficina','Modulo','Accion','Id registro','Detalle','IP','Dispositivo','Sistema Operativo','Navegador','Ubicacion'], ';');
     $sqlx = "SELECT * FROM auditoria WHERE $where ORDER BY fecha_hora DESC, id DESC LIMIT 50000";
     $stx = $conn->prepare($sqlx);
     if ($types !== '') { $stx->bind_param($types, ...$params); }
     $stx->execute();
     $rx = $stx->get_result();
+    $geo_budget_csv = 40;
     while ($a = $rx->fetch_assoc()) {
         $ua = auditoria_parse_ua($a['user_agent'] ?? '');
         fputcsv($out, [
@@ -59,6 +60,7 @@ if (($_GET['export'] ?? '') === 'csv' && $tabla_ok) {
             $a['usuario'], $a['rol'], $a['oficina'], $a['modulo'], $a['accion'],
             $a['id_registro'], $a['detalle'], $a['ip'],
             $ua['dispositivo'], $ua['so'], $ua['navegador'],
+            auditoria_ubicacion($conn, $a['ip'], $geo_budget_csv),
         ], ';');
     }
     fclose($out);
@@ -218,11 +220,11 @@ $qs = function($extra = []) {
                     <tr>
                         <th>Fecha/hora</th><th>Usuario</th><th>Rol</th><th>Oficina</th>
                         <th>Módulo</th><th>Acción</th><th>Registro</th><th>Detalle</th>
-                        <th>Dispositivo</th><th>IP</th>
+                        <th>Dispositivo</th><th>IP</th><th>Ubicación</th>
                     </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($rows as $a): $ua = auditoria_parse_ua($a['user_agent'] ?? ''); ?>
+                <?php $geo_budget = 25; foreach ($rows as $a): $ua = auditoria_parse_ua($a['user_agent'] ?? ''); ?>
                     <tr>
                         <td class="text-nowrap"><?php echo date('d/m/Y H:i:s', strtotime($a['fecha_hora'])); ?></td>
                         <td class="fw-bold"><?php echo htmlspecialchars($a['usuario']); ?></td>
@@ -237,10 +239,11 @@ $qs = function($extra = []) {
                             <br><span class="text-muted"><?php echo htmlspecialchars($ua['so'] . ' · ' . $ua['navegador']); ?></span>
                         </td>
                         <td class="small text-muted text-nowrap"><?php echo htmlspecialchars($a['ip']); ?></td>
+                        <td class="small text-muted"><?php echo htmlspecialchars(auditoria_ubicacion($conn, $a['ip'], $geo_budget) ?: '—'); ?></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (empty($rows)): ?>
-                    <tr><td colspan="10" class="text-center text-muted py-3">No hay registros de auditoría con estos filtros.</td></tr>
+                    <tr><td colspan="11" class="text-center text-muted py-3">No hay registros de auditoría con estos filtros.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>

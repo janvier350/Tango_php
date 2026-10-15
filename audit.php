@@ -66,6 +66,69 @@ function auditoria_parse_ua($ua) {
     return ['dispositivo' => $d, 'so' => $so, 'navegador' => $nav];
 }
 
+// Caché de geolocalización por IP (evita consultar el servicio externo repetido).
+function auditoria_crear_geo($conn) {
+    @$conn->query("CREATE TABLE IF NOT EXISTS geo_ip (
+        ip VARCHAR(60) NOT NULL,
+        ciudad VARCHAR(120) NULL,
+        pais VARCHAR(120) NULL,
+        ts DATETIME NULL,
+        PRIMARY KEY (ip)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+/**
+ * Devuelve "Ciudad, País" para una IP. Usa caché en BD; para IPs nuevas consulta
+ * un servicio externo (ip-api.com) con límite de consultas por carga ($presupuesto)
+ * y timeout corto. Si el hosting no permite salida a internet, devuelve ''.
+ */
+function auditoria_ubicacion($conn, $ip, &$presupuesto) {
+    $ip = trim((string)$ip);
+    if ($ip === '') return '';
+    // IPs locales/privadas
+    if ($ip === '127.0.0.1' || $ip === '::1' ||
+        preg_match('/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/', $ip)) {
+        return 'Local';
+    }
+    static $tabla_ok = null;
+    if ($tabla_ok === null) {
+        auditoria_crear_geo($conn);
+        $tabla_ok = (@$conn->query("SELECT 1 FROM geo_ip LIMIT 1") !== false);
+    }
+    if (!$tabla_ok) return '';
+
+    // Buscar en caché
+    $ipe = $conn->real_escape_string($ip);
+    $r = @$conn->query("SELECT ciudad, pais FROM geo_ip WHERE ip = '$ipe'");
+    if ($r && $row = $r->fetch_assoc()) {
+        $c = trim(($row['ciudad'] ?? '') . (($row['ciudad'] && $row['pais']) ? ', ' : '') . ($row['pais'] ?? ''));
+        return $c !== '' ? $c : '—';
+    }
+    // No está en caché: ¿queda presupuesto para consultar?
+    if ($presupuesto <= 0) return '';
+    $presupuesto--;
+
+    $ciudad = ''; $pais = '';
+    if (function_exists('curl_init')) {
+        $ch = curl_init("http://ip-api.com/json/" . urlencode($ip) . "?fields=status,country,city&lang=es");
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>3, CURLOPT_CONNECTTIMEOUT=>2]);
+        $resp = @curl_exec($ch);
+        curl_close($ch);
+        if ($resp) {
+            $j = json_decode($resp, true);
+            if (is_array($j) && ($j['status'] ?? '') === 'success') {
+                $ciudad = $j['city'] ?? ''; $pais = $j['country'] ?? '';
+            }
+        }
+    }
+    // Guardar en caché (aunque sea vacío, para no reintentar siempre)
+    $cs = $conn->real_escape_string($ciudad); $ps = $conn->real_escape_string($pais);
+    @$conn->query("INSERT INTO geo_ip (ip, ciudad, pais, ts) VALUES ('$ipe','$cs','$ps', NOW())
+                   ON DUPLICATE KEY UPDATE ciudad='$cs', pais='$ps', ts=NOW()");
+    $c = trim($ciudad . (($ciudad && $pais) ? ', ' : '') . $pais);
+    return $c !== '' ? $c : '—';
+}
+
 /**
  * Registra una acción en el log. Nunca interrumpe el flujo principal:
  * si algo falla (tabla inexistente, sin permisos), se omite silenciosamente.
