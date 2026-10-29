@@ -241,7 +241,14 @@ if (!$filtro_enviado && $f_desde === '') {
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label class="small fw-bold  text-primary">Intermediario</label>
+                        <label class="small fw-bold  text-primary d-flex align-items-center gap-1">
+                            Intermediario
+                            <button type="button" class="btn btn-primary btn-sm py-0 px-1 lh-1" style="font-size:0.75rem;"
+                                data-bs-toggle="modal" data-bs-target="#modalTipoIntermediario"
+                                title="Habilitar un beneficiario existente como intermediario">
+                                <i class="bi bi-person-gear"></i>
+                            </button>
+                        </label>
                         <select name="intermediario" class="form-select form-select-sm" required>
                             <option value="">Buscar intermediario...</option>
                         </select>
@@ -817,6 +824,101 @@ if (!$filtro_enviado && $f_desde === '') {
     </div>
   </div>
 </div>
+
+<!-- Modal: Habilitar beneficiario como intermediario -->
+<div class="modal fade" id="modalTipoIntermediario" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white py-2">
+        <h6 class="modal-title mb-0"><i class="bi bi-person-gear me-2"></i>Beneficiario &harr; Intermediario</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2">
+          Busca un beneficiario y habilítalo para que también aparezca en la lista de
+          <strong>Intermediarios</strong> (o quítalo para dejarlo solo como beneficiario).
+        </p>
+        <label class="form-label small fw-bold">Beneficiario</label>
+        <select id="ti_sel" class="form-select form-select-sm" style="width:100%">
+          <option value="">Buscar beneficiario...</option>
+        </select>
+        <div id="ti_estado" class="mt-3 small text-muted">Selecciona un beneficiario para ver su estado.</div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="ti_quitar" disabled>
+          <i class="bi bi-dash-circle me-1"></i>Solo beneficiario
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" id="ti_habilitar" disabled>
+          <i class="bi bi-check-circle me-1"></i>Habilitar como intermediario
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+$(function () {
+    var $sel = $('#ti_sel'), seleccion = null;
+    $('#modalTipoIntermediario').on('shown.bs.modal', function () {
+        if ($sel.hasClass('select2-hidden-accessible')) return;
+        $sel.select2({
+            dropdownParent: $('#modalTipoIntermediario'),
+            width: '100%', theme: 'classic', minimumInputLength: 1,
+            placeholder: 'Buscar beneficiario...',
+            language: { inputTooShort: function(){ return 'Escribe para buscar...'; },
+                        searching: function(){ return 'Buscando...'; },
+                        noResults: function(){ return 'Sin resultados'; } },
+            ajax: {
+                url: 'ajax_beneficiario.php', type: 'POST', dataType: 'json', delay: 250,
+                data: function (p) { return { action: 'search', q: p.term || '', tipo: '' }; },
+                processResults: function (d) { return { results: (d && d.results) ? d.results : [] }; },
+                cache: true
+            }
+        });
+        $sel.on('select2:select', function (e) {
+            seleccion = e.params.data;
+            pintarEstado(seleccion.tipo);
+        });
+    });
+    function pintarEstado(tipo) {
+        var esInter = (tipo === 'I');
+        $('#ti_estado').html(esInter
+            ? '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Ya es <strong>intermediario</strong> (además de beneficiario).</span>'
+            : '<span class="text-secondary"><i class="bi bi-info-circle me-1"></i>Actualmente es <strong>solo beneficiario</strong>.</span>');
+        $('#ti_habilitar').prop('disabled', esInter);
+        $('#ti_quitar').prop('disabled', !esInter);
+    }
+    function guardarTipo(nuevo) {
+        if (!seleccion) return;
+        $('#ti_habilitar,#ti_quitar').prop('disabled', true);
+        $.post('ajax_beneficiario.php', { action: 'set_tipo', razon_social: seleccion.id, tipo: nuevo }, function (res) {
+            if (res && res.success) {
+                seleccion.tipo = res.tipo;
+                pintarEstado(res.tipo);
+                // Si quedó como intermediario, agregarlo al select de Intermediario y seleccionarlo
+                if (res.tipo === 'I') {
+                    var $int = $('select[name="intermediario"]');
+                    var existe = false;
+                    $int.find('option').each(function () { if (this.value === seleccion.id) existe = true; });
+                    if (!existe) $int.append(new Option(seleccion.id, seleccion.id, false, false));
+                }
+                var msg = res.tipo === 'I' ? 'Ahora también es intermediario.' : 'Queda solo como beneficiario.';
+                var toast = $('<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999"><div class="toast show align-items-center text-bg-primary border-0"><div class="d-flex"><div class="toast-body"><i class="bi bi-check-circle me-2"></i>' + msg + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div></div>');
+                $('body').append(toast); setTimeout(function(){ toast.remove(); }, 3000);
+            } else {
+                alert((res && res.msg) ? res.msg : 'Error al guardar.');
+                pintarEstado(seleccion.tipo);
+            }
+        }, 'json').fail(function () { alert('Error de conexión.'); pintarEstado(seleccion.tipo); });
+    }
+    $('#ti_habilitar').on('click', function () { guardarTipo('I'); });
+    $('#ti_quitar').on('click', function () { guardarTipo('0'); });
+    $('#modalTipoIntermediario').on('hidden.bs.modal', function () {
+        seleccion = null; $('#ti_estado').html('Selecciona un beneficiario para ver su estado.');
+        $('#ti_habilitar,#ti_quitar').prop('disabled', true);
+        if ($sel.hasClass('select2-hidden-accessible')) $sel.val(null).trigger('change');
+    });
+});
+</script>
 
 <!-- Dictado por voz -->
 <script>
