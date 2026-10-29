@@ -18,6 +18,7 @@
 
         <a class="nav-link px-3" href="glosario_inf_financiera.php"><i class="bi bi-journal-text me-1"></i> Glosario Inf. Financiera</a>
         <a class="nav-link px-3" href="auditoria.php"><i class="bi bi-shield-check me-1"></i> Auditoría</a>
+        <a class="nav-link px-3" href="beneficiarios_duplicados.php" title="Limpiar beneficiarios duplicados"><i class="bi bi-people me-1"></i> Duplicados</a>
        <!-- <a class="nav-link px-3" href="usuarios.php"><i class="bi bi-people me-1"></i> Usuarios</a> -->
         
         <?php if($_SESSION['user_rol'] == 1): ?>

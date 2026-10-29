@@ -9,9 +9,9 @@ $conn->set_charset("utf8");
 $action = $_POST['action'] ?? '';
 
 if ($action === 'check') {
-    $razon = strtoupper(trim($_POST['razon_social'] ?? ''));
+    $razon = preg_replace('/\s+/', ' ', strtoupper(trim($_POST['razon_social'] ?? '')));
     if ($razon === '') { echo json_encode(['exists' => false]); exit; }
-    $stmt = $conn->prepare("SELECT ID_BENEFICIARIO FROM BENEFICIARIO WHERE UPPER(RAZON_SOCIAL) = ?");
+    $stmt = $conn->prepare("SELECT ID_BENEFICIARIO FROM BENEFICIARIO WHERE UPPER(TRIM(RAZON_SOCIAL)) = ?");
     $stmt->bind_param("s", $razon);
     $stmt->execute();
     echo json_encode(['exists' => $stmt->get_result()->num_rows > 0]);
@@ -19,14 +19,15 @@ if ($action === 'check') {
 }
 
 if ($action === 'crear') {
-    $razon = strtoupper(trim($_POST['razon_social'] ?? ''));
+    // Normaliza: mayusculas, sin espacios al inicio/fin y sin espacios dobles.
+    $razon = preg_replace('/\s+/', ' ', strtoupper(trim($_POST['razon_social'] ?? '')));
     $tipo  = in_array($_POST['tipo'] ?? '', ['I', '0']) ? $_POST['tipo'] : '0';
 
     if ($razon === '') {
         echo json_encode(['success' => false, 'msg' => 'La razón social es obligatoria.']); exit;
     }
 
-    $stmt = $conn->prepare("SELECT ID_BENEFICIARIO FROM BENEFICIARIO WHERE UPPER(RAZON_SOCIAL) = ?");
+    $stmt = $conn->prepare("SELECT ID_BENEFICIARIO FROM BENEFICIARIO WHERE UPPER(TRIM(RAZON_SOCIAL)) = ?");
     $stmt->bind_param("s", $razon);
     $stmt->execute();
     if ($stmt->get_result()->num_rows > 0) {
