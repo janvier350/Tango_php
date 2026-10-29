@@ -57,18 +57,37 @@ if ($action === 'search') {
     $tipo = $_POST['tipo'] ?? $_GET['tipo'] ?? '';
     $like = '%' . $q . '%';
     if ($tipo === 'I') {
-        $stmt = $conn->prepare("SELECT RAZON_SOCIAL FROM BENEFICIARIO WHERE TIPO='I' AND RAZON_SOCIAL LIKE ? ORDER BY RAZON_SOCIAL ASC LIMIT 40");
+        $stmt = $conn->prepare("SELECT RAZON_SOCIAL, TIPO FROM BENEFICIARIO WHERE TIPO='I' AND RAZON_SOCIAL LIKE ? ORDER BY RAZON_SOCIAL ASC LIMIT 40");
     } else {
-        $stmt = $conn->prepare("SELECT RAZON_SOCIAL FROM BENEFICIARIO WHERE RAZON_SOCIAL LIKE ? ORDER BY RAZON_SOCIAL ASC LIMIT 40");
+        $stmt = $conn->prepare("SELECT RAZON_SOCIAL, TIPO FROM BENEFICIARIO WHERE RAZON_SOCIAL LIKE ? ORDER BY RAZON_SOCIAL ASC LIMIT 40");
     }
     $stmt->bind_param("s", $like);
     $stmt->execute();
     $res = $stmt->get_result();
     $out = [];
     while ($row = $res->fetch_assoc()) {
-        $out[] = ['id' => $row['RAZON_SOCIAL'], 'text' => $row['RAZON_SOCIAL']];
+        $out[] = ['id' => $row['RAZON_SOCIAL'], 'text' => $row['RAZON_SOCIAL'], 'tipo' => $row['TIPO']];
     }
     echo json_encode(['results' => $out]);
+    exit;
+}
+
+if ($action === 'set_tipo') {
+    // Habilita/deshabilita un beneficiario existente como intermediario (TIPO '0' <-> 'I')
+    $razon = strtoupper(trim($_POST['razon_social'] ?? ''));
+    $nuevo = (($_POST['tipo'] ?? '') === 'I') ? 'I' : '0';
+    if ($razon === '') { echo json_encode(['success' => false, 'msg' => 'Falta el beneficiario.']); exit; }
+
+    $stmt = $conn->prepare("UPDATE BENEFICIARIO SET TIPO = ? WHERE UPPER(RAZON_SOCIAL) = ?");
+    $stmt->bind_param("ss", $nuevo, $razon);
+    if ($stmt->execute()) {
+        require_once 'audit.php';
+        registrar_auditoria($conn, 'Beneficiario', 'EDITO', null,
+            "Tipo de '$razon' -> " . ($nuevo === 'I' ? 'Intermediario (tambien)' : 'Solo beneficiario'));
+        echo json_encode(['success' => true, 'tipo' => $nuevo]);
+    } else {
+        echo json_encode(['success' => false, 'msg' => 'Error al guardar: ' . $stmt->error]);
+    }
     exit;
 }
 
