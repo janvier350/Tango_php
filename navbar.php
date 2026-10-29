@@ -41,6 +41,7 @@
 
         <?php if($_SESSION['user_rol'] == 1 || $_SESSION['user_rol'] == 3 || $_SESSION['user_rol'] == 4): ?>
         <a class="nav-link px-3" href="auditoria.php"><i class="bi bi-shield-check me-1"></i> Auditoría</a>
+        <a class="nav-link px-3" href="beneficiarios_duplicados.php" title="Limpiar beneficiarios duplicados"><i class="bi bi-people me-1"></i> Duplicados</a>
         <?php endif; ?>
 
         <?php if($_SESSION['user_rol'] == 1): ?>
