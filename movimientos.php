@@ -499,17 +499,20 @@ if (!$filtro_enviado && $f_desde === '') {
                 <tbody>
     <?php
     $id_usuario_sesion = $_SESSION["user_id"];
+    $id_oficina_activa = intval($_SESSION["oficina_ID"]);
     $saldo_acumulado = 0;
 
-    // Construir query con filtros
+    // Construir query con filtros. Se lista por OFICINA ACTIVA (la caja), no por
+    // usuario: así el saldo de la caja es correcto aunque la hayan operado
+    // varias personas (multi-caja).
     $sql_base = "SELECT m.*, r.REPOSICION AS nombre_clasificacion, c.nombre AS nombre_categoria, p.PROYECTO AS nombre_proyecto, u.usuario AS nombre_revisor
         FROM movimientos m
         LEFT JOIN CAT_REPOSICION r ON m.inf_fin = r.ID_REPOSICION
         LEFT JOIN cat_reposiciones c ON r.ID_CAT_REPOCICIONES = c.id
         LEFT JOIN PROYECTOS p ON m.ID_PROYECTO = p.ID_PROYECTO
         LEFT JOIN usuarios u ON m.ID_USUARIO_REVISA = u.id
-        WHERE m.ID_USUARIO = ?";
-    $params = [$id_usuario_sesion];
+        WHERE m.ID_OFICINA = ?";
+    $params = [$id_oficina_activa];
     $types  = "i";
 
     if ($f_desde !== '') { $sql_base .= " AND m.fecha >= ?"; $params[] = $f_desde; $types .= "s"; }
@@ -530,14 +533,14 @@ if (!$filtro_enviado && $f_desde === '') {
     $stmt_list->execute();
     $movs = $stmt_list->get_result();
 
-    // Saldo inicial: acumulado de los movimientos activos del usuario ANTERIORES
-    // a "Desde", para que el saldo corrido no arranque en 0 cuando hay filtro de
-    // fecha (ej. el límite por defecto de 3 meses) y coincida con el total real.
+    // Saldo inicial: acumulado de los movimientos activos de la CAJA (oficina)
+    // anteriores a "Desde", para que el saldo corrido no arranque en 0 cuando hay
+    // filtro de fecha (ej. el límite por defecto de 3 meses) y cuadre con el total.
     if ($f_desde !== '') {
         $stmt_ini = $conn->prepare("SELECT COALESCE(SUM(importe_recibido - importe_entregado),0) AS s
                                     FROM movimientos
-                                    WHERE ID_USUARIO = ? AND ESTADO = 'A' AND fecha < ?");
-        $stmt_ini->bind_param("is", $id_usuario_sesion, $f_desde);
+                                    WHERE ID_OFICINA = ? AND ESTADO = 'A' AND fecha < ?");
+        $stmt_ini->bind_param("is", $id_oficina_activa, $f_desde);
         $stmt_ini->execute();
         $saldo_acumulado = (float)($stmt_ini->get_result()->fetch_assoc()['s'] ?? 0);
         $stmt_ini->close();
@@ -610,16 +613,11 @@ if (!$filtro_enviado && $f_desde === '') {
                    data-doc="<?php echo htmlspecialchars($m['doc_soporte'] ?? '', ENT_QUOTES); ?>"
                    data-banco="<?php echo htmlspecialchars($m['banco'] ?? '', ENT_QUOTES); ?>"
                    data-cheque="<?php echo htmlspecialchars($m['cheque_num'] ?? '', ENT_QUOTES); ?>"><i class="bi bi-file-earmark-pdf"></i></button>
-                <a href="editar_movimiento.php?id=<?php echo $m['id']; ?>" title="Editar" class="btn btn-outline-warning btn-sm <?php echo $es_anulado ? 'disabled' : ''; ?>"><i class="bi bi-pencil-square"></i></a>
-
-                <?php if (!$es_anulado): ?>
-                <a href="#"
-                   title="Anular"
-                   class="btn btn-outline-danger btn-sm"
-                   onclick="return anularMovimiento(<?php echo $m['id']; ?>, 'movimientos.php');">
-                    <i class="bi bi-x-circle"></i>
-                </a>
-                <?php else: ?>
+                <?php $es_propio = ((int)($m['ID_USUARIO'] ?? 0) === (int)$id_usuario_sesion); ?>
+                <?php if ($es_propio && !$es_anulado): ?>
+                <a href="editar_movimiento.php?id=<?php echo $m['id']; ?>" title="Editar" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
+                <a href="#" title="Anular" class="btn btn-outline-danger btn-sm" onclick="return anularMovimiento(<?php echo $m['id']; ?>, 'movimientos.php');"><i class="bi bi-x-circle"></i></a>
+                <?php elseif ($es_anulado): ?>
                 <span class="badge bg-danger">ANULADO</span>
                 <?php endif; ?>
             </div>

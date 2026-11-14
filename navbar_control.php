@@ -14,6 +14,29 @@
         <a class="nav-link px-3" href="index.php"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
         <a class="nav-link px-3" href="movimientos.php"><i class="bi bi-journal-text me-1"></i> Movimientos</a>
 
+        <?php
+        if (isset($conn)) {
+            require_once 'multicaja.php';
+            $mis_ofis = oficinas_de_usuario($conn, $_SESSION['user_id'] ?? 0);
+            if (count($mis_ofis) > 1):
+        ?>
+        <div class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle px-3 text-warning fw-bold" href="#" role="button" data-bs-toggle="dropdown" title="Caja activa">
+            <i class="bi bi-cash-stack me-1"></i>Caja: <?php echo htmlspecialchars($_SESSION['oficina'] ?? ''); ?>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><h6 class="dropdown-header">Cambiar caja activa</h6></li>
+            <?php foreach ($mis_ofis as $o): $act = ((int)$o['ID_OFICINA'] === (int)($_SESSION['oficina_ID'] ?? 0)); ?>
+            <li>
+              <a class="dropdown-item <?php echo $act ? 'active' : ''; ?>" href="cambiar_caja.php?id_oficina=<?php echo (int)$o['ID_OFICINA']; ?>">
+                <?php echo htmlspecialchars($o['OFICINA']); ?><?php echo $act ? ' <i class="bi bi-check-lg"></i>' : ''; ?>
+              </a>
+            </li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+        <?php endif; } ?>
+
         <a class="nav-link px-3 text-warning fw-bold" href="arqueo.php"><i class="bi bi-calculator me-1"></i> Arqueo</a>
 
         <a class="nav-link px-3" href="glosario_inf_financiera.php"><i class="bi bi-journal-text me-1"></i> Glosario Inf. Financiera</a>

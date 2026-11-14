@@ -9,6 +9,8 @@ if ($_SESSION['user_rol'] != 1) {
 
 require_once 'oficina_schema.php';
 asegurar_form_simple($conn); // asegura la columna FORM_SIMPLE
+require_once 'multicaja.php';
+asegurar_usuario_oficinas($conn); // asegura la tabla de cajas adicionales
 require_once 'audit.php';
 
 $mensaje  = '';
@@ -62,6 +64,25 @@ if (isset($_POST['editar_usuario'])) {
         }
     } else {
         $mensaje = 'Datos incompletos para editar.'; $tipo_msg = 'danger';
+    }
+}
+
+// ── Cajas adicionales (multi-caja) ───────────────────────────────────
+if (isset($_POST['set_oficinas_extra'])) {
+    $uid      = intval($_POST['uid'] ?? 0);
+    $primaria = intval($_POST['primaria'] ?? 0);
+    $sel      = $_POST['ofis'] ?? [];
+    if ($uid > 0) {
+        $conn->query("DELETE FROM usuario_oficinas WHERE ID_USUARIO = $uid");
+        $ins = $conn->prepare("INSERT IGNORE INTO usuario_oficinas (ID_USUARIO, ID_OFICINA) VALUES (?, ?)");
+        $agregadas = 0;
+        foreach ((array)$sel as $oid) {
+            $oid = intval($oid);
+            if ($oid > 0 && $oid !== $primaria) { $ins->bind_param("ii", $uid, $oid); $ins->execute(); $agregadas++; }
+        }
+        registrar_auditoria($conn, 'Usuarios', 'EDITO', $uid,
+            "Actualizó cajas adicionales del usuario id $uid (ahora $agregadas adicional(es))");
+        $mensaje = 'Cajas adicionales actualizadas.'; $tipo_msg = 'success';
     }
 }
 
@@ -164,6 +185,12 @@ if ($res_ulist) {
     $res_s = $conn->query("SELECT id, nombres, usuario, '' AS rol, '' AS oficina, 0 AS id_rol_actual, 0 AS id_ofic_actual FROM usuarios ORDER BY nombres");
     $usuarios = $res_s ? $res_s->fetch_all(MYSQLI_ASSOC) : [];
 }
+
+// Mapa de cajas adicionales por usuario: [ID_USUARIO => [ID_OFICINA, ...]]
+$extras_map = [];
+$re = $conn->query("SELECT ID_USUARIO, ID_OFICINA FROM usuario_oficinas");
+if ($re) { while ($x = $re->fetch_assoc()) { $extras_map[(int)$x['ID_USUARIO']][] = (int)$x['ID_OFICINA']; } }
+
 
 // Oficinas con conteo de usuarios
 $col_ind_list = col_existe($conn, 'CTR_OFICINA', 'ES_INDEPENDIENTE') ? 'o.ES_INDEPENDIENTE' : '0';
@@ -326,6 +353,12 @@ $tab_activa = $_GET['tab'] ?? 'usuarios';
                                         <?php echo (int)$u['id_ofic_actual']; ?>)"
                                     title="Editar rol / oficina">
                                     <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <!-- Botón cajas adicionales (multi-caja) -->
+                                <button class="btn btn-outline-info btn-sm py-0 px-1 me-1"
+                                    onclick='abrirCajas(<?php echo (int)$u['id']; ?>, "<?php echo htmlspecialchars(addslashes($u['usuario'])); ?>", <?php echo (int)$u['id_ofic_actual']; ?>, <?php echo json_encode($extras_map[(int)$u['id']] ?? []); ?>)'
+                                    title="Cajas adicionales (multi-caja)">
+                                    <i class="bi bi-cash-stack"></i>
                                 </button>
                                 <!-- Botón eliminar -->
                                 <a href="?borrar=<?php echo $u['id']; ?>&tab=usuarios"
@@ -498,6 +531,39 @@ $tab_activa = $_GET['tab'] ?? 'usuarios';
     </div>
 </div>
 
+<!-- ── Modal Cajas adicionales (multi-caja) ── -->
+<div class="modal fade" id="modalCajas" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header text-white" style="background:#117a8b;">
+        <h6 class="modal-title"><i class="bi bi-cash-stack me-1"></i> Cajas del usuario <span id="cajas_user" class="fw-normal"></span></h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="?tab=usuarios">
+        <div class="modal-body">
+          <input type="hidden" name="uid" id="cajas_uid">
+          <input type="hidden" name="primaria" id="cajas_primaria">
+          <p class="small text-muted mb-2">Marca las cajas <strong>adicionales</strong> que podrá operar además de su oficina principal. Podrá cambiar entre ellas con el selector "Caja" de la barra.</p>
+          <div class="row g-1">
+            <?php foreach ($ofics as $o): ?>
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input cajas-chk" type="checkbox" name="ofis[]" value="<?php echo (int)$o['ID_OFICINA']; ?>" id="caja_<?php echo (int)$o['ID_OFICINA']; ?>">
+                <label class="form-check-label small" for="caja_<?php echo (int)$o['ID_OFICINA']; ?>" data-base="<?php echo htmlspecialchars($o['OFICINA']); ?>"><?php echo htmlspecialchars($o['OFICINA']); ?></label>
+              </div>
+            </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" name="set_oficinas_extra" class="btn btn-sm btn-info text-white"><i class="bi bi-save me-1"></i> Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 function togglePass() {
@@ -515,6 +581,26 @@ function abrirEditar(id, nombre, idRol, idOfic) {
     for (var i = 0; i < selRol.options.length;  i++) if (selRol.options[i].value  == idRol)  selRol.selectedIndex  = i;
     for (var j = 0; j < selOfic.options.length; j++) if (selOfic.options[j].value == idOfic) selOfic.selectedIndex = j;
     new bootstrap.Modal(document.getElementById('modalEditar')).show();
+}
+
+function abrirCajas(id, usuario, primaria, extras) {
+    document.getElementById('cajas_uid').value = id;
+    document.getElementById('cajas_primaria').value = primaria;
+    document.getElementById('cajas_user').textContent = usuario;
+    primaria = parseInt(primaria, 10);
+    document.querySelectorAll('.cajas-chk').forEach(function (c) {
+        var lbl = c.parentNode.querySelector('label');
+        lbl.innerHTML = lbl.dataset.base;
+        var val = parseInt(c.value, 10);
+        if (val === primaria) {
+            c.checked = true; c.disabled = true;
+            lbl.innerHTML = lbl.dataset.base + ' <span class="badge bg-secondary">principal</span>';
+        } else {
+            c.disabled = false;
+            c.checked = extras.indexOf(val) !== -1;
+        }
+    });
+    new bootstrap.Modal(document.getElementById('modalCajas')).show();
 }
 </script>
 </body>
