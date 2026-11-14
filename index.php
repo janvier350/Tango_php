@@ -156,23 +156,23 @@ if (isset($_SESSION["user_rol"])) {
                 <div class="card bg-dark text-white text-center p-4">
                     <h6 class="fw-bold">Oficina - <?php echo $_SESSION["oficina"]; ?></h6>
                      <?php
-                        // Obtenemos el ID del usuario de la sesi��n
-                        $id_usuario_sesion = $_SESSION["user_id"]; 
-                        
-                        // Query para sumar recibidos y restar entregados
-                        $sql_saldo = "SELECT SUM(importe_recibido - importe_entregado) as saldo_total 
-                                      FROM movimientos 
-                                      WHERE ID_USUARIO = ? AND ESTADO = 'A'";
-                        
+                        // Saldo de la CAJA ACTIVA (oficina), no del usuario, para que
+                        // coincida con la caja seleccionada en el selector multi-caja.
+                        $id_oficina_activa = intval($_SESSION["oficina_ID"]);
+
+                        $sql_saldo = "SELECT SUM(importe_recibido - importe_entregado) as saldo_total
+                                      FROM movimientos
+                                      WHERE ID_OFICINA = ? AND ESTADO = 'A'";
+
                         $stmt_saldo = $conn->prepare($sql_saldo);
-                        $stmt_saldo->bind_param("i", $id_usuario_sesion);
+                        $stmt_saldo->bind_param("i", $id_oficina_activa);
                         $stmt_saldo->execute();
                         $resultado_saldo = $stmt_saldo->get_result();
                         $datos_saldo = $resultado_saldo->fetch_assoc();
-                        
+
                         // Guardamos el valor en una variable
                         $total_caja_usuario = $datos_saldo['saldo_total'] ?? 0;
-                        
+
                         $stmt_saldo->close();
                         ?>
                     <h2 class="display-5 fw-bold">$ <?php echo number_format($total_caja_usuario, 2); ?></h2>
