@@ -13,7 +13,31 @@
         
         
         
-        <a class="nav-link px-3" href="index.php"><i class="bi bi-people me-1"></i> Home</a> 
+        <a class="nav-link px-3" href="index.php"><i class="bi bi-people me-1"></i> Home</a>
+
+        <?php
+        // Selector de "Caja activa": solo si el usuario puede operar más de una oficina.
+        if (isset($conn)) {
+            require_once 'multicaja.php';
+            $mis_ofis = oficinas_de_usuario($conn, $_SESSION['user_id'] ?? 0);
+            if (count($mis_ofis) > 1):
+        ?>
+        <div class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle px-3 text-warning fw-bold" href="#" role="button" data-bs-toggle="dropdown" title="Caja activa">
+            <i class="bi bi-cash-stack me-1"></i>Caja: <?php echo htmlspecialchars($_SESSION['oficina'] ?? ''); ?>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><h6 class="dropdown-header">Cambiar caja activa</h6></li>
+            <?php foreach ($mis_ofis as $o): $act = ((int)$o['ID_OFICINA'] === (int)($_SESSION['oficina_ID'] ?? 0)); ?>
+            <li>
+              <a class="dropdown-item <?php echo $act ? 'active' : ''; ?>" href="cambiar_caja.php?id_oficina=<?php echo (int)$o['ID_OFICINA']; ?>">
+                <?php echo htmlspecialchars($o['OFICINA']); ?><?php echo $act ? ' <i class="bi bi-check-lg"></i>' : ''; ?>
+              </a>
+            </li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+        <?php endif; } ?>
         <?php if($_SESSION['user_rol'] == 2): ?>
         <?php
         // El formulario simplificado (tipo Mensajería) se decide por FORM_SIMPLE.
