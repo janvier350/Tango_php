@@ -12,8 +12,11 @@ if (isset($_POST['login'])) {
 
     $res = $conn->query("SELECT * FROM usuarios U INNER JOIN CTR_ROL R ON U.ID_ROL = R.ID_ROL INNER JOIN CTR_OFICINA O ON U.ID_CTR_OFICINA = O.ID_OFICINA WHERE usuario = '$u'");
     if ($user = $res->fetch_assoc()) {
+        if (array_key_exists('ACTIVO', $user) && (int)$user['ACTIVO'] === 0) {
+            $error = "Usuario inactivo. Contacta al administrador.";
+        }
         // Verificamos si la clave coincide (funciona con texto plano o hash)
-        if (password_verify($p, $user['clave']) || $p == $user['clave']) {
+        elseif (password_verify($p, $user['clave']) || $p == $user['clave']) {
             $_SESSION['auth'] = true;
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['usuario'];

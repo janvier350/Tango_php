@@ -13,6 +13,11 @@ require_once 'multicaja.php';
 asegurar_usuario_oficinas($conn); // asegura la tabla de cajas adicionales
 require_once 'audit.php';
 
+// Asegura la columna ACTIVO (usuario activo/inactivo) sin romper si ya existe.
+if (!col_existe($conn, 'usuarios', 'ACTIVO')) {
+    @$conn->query("ALTER TABLE usuarios ADD COLUMN ACTIVO TINYINT(1) NOT NULL DEFAULT 1");
+}
+
 $mensaje  = '';
 $tipo_msg = '';
 
@@ -83,6 +88,18 @@ if (isset($_POST['set_oficinas_extra'])) {
         registrar_auditoria($conn, 'Usuarios', 'EDITO', $uid,
             "Actualizó cajas adicionales del usuario id $uid (ahora $agregadas adicional(es))");
         $mensaje = 'Cajas adicionales actualizadas.'; $tipo_msg = 'success';
+    }
+}
+
+// ── Activar / desactivar usuario (bloquea el login sin borrar) ───────
+if (isset($_GET['set_activo'])) {
+    $uid = intval($_GET['set_activo']);
+    $v   = (intval($_GET['v'] ?? 1) === 0) ? 0 : 1;
+    if ($uid > 0 && $uid !== (int)$_SESSION['user_id'] && col_existe($conn, 'usuarios', 'ACTIVO')) {
+        $conn->query("UPDATE usuarios SET ACTIVO = $v WHERE id = $uid");
+        registrar_auditoria($conn, 'Usuarios', 'EDITO', $uid, ($v ? 'Reactivó' : 'Desactivó') . " el usuario id $uid");
+        $mensaje = $v ? 'Usuario reactivado.' : 'Usuario desactivado: ya no podrá iniciar sesión.';
+        $tipo_msg = $v ? 'success' : 'warning';
     }
 }
 
@@ -173,7 +190,8 @@ $res_ulist = $conn->query("
            COALESCE(r.ROL, 'Sin rol')         AS rol,
            COALESCE(o.OFICINA, 'Sin oficina')  AS oficina,
            COALESCE(u.ID_ROL, 0)              AS id_rol_actual,
-           COALESCE(u.ID_CTR_OFICINA, 0)      AS id_ofic_actual
+           COALESCE(u.ID_CTR_OFICINA, 0)      AS id_ofic_actual,
+           COALESCE(u.ACTIVO, 1)              AS activo
     FROM usuarios u
     LEFT JOIN CTR_ROL r     ON u.ID_ROL = r.ID_ROL
     LEFT JOIN CTR_OFICINA o ON u.ID_CTR_OFICINA = o.ID_OFICINA
@@ -182,7 +200,7 @@ $res_ulist = $conn->query("
 if ($res_ulist) {
     $usuarios = $res_ulist->fetch_all(MYSQLI_ASSOC);
 } else {
-    $res_s = $conn->query("SELECT id, nombres, usuario, '' AS rol, '' AS oficina, 0 AS id_rol_actual, 0 AS id_ofic_actual FROM usuarios ORDER BY nombres");
+    $res_s = $conn->query("SELECT id, nombres, usuario, '' AS rol, '' AS oficina, 0 AS id_rol_actual, 0 AS id_ofic_actual, 1 AS activo FROM usuarios ORDER BY nombres");
     $usuarios = $res_s ? $res_s->fetch_all(MYSQLI_ASSOC) : [];
 }
 
@@ -340,7 +358,9 @@ $tab_activa = $_GET['tab'] ?? 'usuarios';
                         <?php foreach ($usuarios as $u): ?>
                         <tr>
                             <td class="small"><?php echo htmlspecialchars($u['nombres']); ?></td>
-                            <td><code class="small"><?php echo htmlspecialchars($u['usuario']); ?></code></td>
+                            <td><code class="small"><?php echo htmlspecialchars($u['usuario']); ?></code>
+                                <?php if ((int)($u['activo'] ?? 1) === 0): ?><span class="badge bg-secondary ms-1">Inactivo</span><?php endif; ?>
+                            </td>
                             <td><span class="badge bg-secondary small"><?php echo htmlspecialchars($u['rol']); ?></span></td>
                             <td class="small"><?php echo htmlspecialchars($u['oficina']); ?></td>
                             <td class="text-center">
@@ -360,6 +380,21 @@ $tab_activa = $_GET['tab'] ?? 'usuarios';
                                     title="Cajas adicionales (multi-caja)">
                                     <i class="bi bi-cash-stack"></i>
                                 </button>
+                                <!-- Botón activar / desactivar -->
+                                <?php if ((int)($u['activo'] ?? 1) === 1): ?>
+                                <a href="?set_activo=<?php echo $u['id']; ?>&v=0&tab=usuarios"
+                                   class="btn btn-outline-warning btn-sm py-0 px-1 me-1"
+                                   onclick="return confirm('¿Desactivar a <?php echo htmlspecialchars(addslashes($u['usuario'])); ?>? No podrá iniciar sesión (no se borra).')"
+                                   title="Desactivar (bloquear login)">
+                                    <i class="bi bi-person-dash"></i>
+                                </a>
+                                <?php else: ?>
+                                <a href="?set_activo=<?php echo $u['id']; ?>&v=1&tab=usuarios"
+                                   class="btn btn-outline-success btn-sm py-0 px-1 me-1"
+                                   title="Reactivar usuario">
+                                    <i class="bi bi-person-check"></i>
+                                </a>
+                                <?php endif; ?>
                                 <!-- Botón eliminar -->
                                 <a href="?borrar=<?php echo $u['id']; ?>&tab=usuarios"
                                    class="btn btn-outline-danger btn-sm py-0 px-1"
